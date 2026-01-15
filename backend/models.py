@@ -25,7 +25,7 @@ class TicketCreate(TicketBase):
 
 class Ticket(TicketBase):
     """Full Ticket model with metadata"""
-    id: str = Field(alias="_id")
+    id: str
     created_at: datetime
     updated_at: datetime
 

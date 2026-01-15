@@ -5,6 +5,10 @@ from datetime import datetime
 from bson.objectid import ObjectId
 from models import Ticket, TicketCreate, TicketStatus
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -69,8 +73,9 @@ async def get_tickets():
         # Find all tickets and sort by created_at in descending order
         cursor = tickets_collection.find().sort("created_at", -1)
         async for ticket in cursor:
-            # Convert MongoDB _id ObjectId to string
-            ticket["_id"] = str(ticket["_id"])
+            # Convert MongoDB _id ObjectId to string and rename to id
+            ticket["id"] = str(ticket["_id"])
+            del ticket["_id"]
             tickets.append(Ticket(**ticket))
         
         return tickets
@@ -109,7 +114,8 @@ async def create_ticket(ticket: TicketCreate):
         
         # Retrieve the created ticket
         created_ticket = await tickets_collection.find_one({"_id": result.inserted_id})
-        created_ticket["_id"] = str(created_ticket["_id"])
+        created_ticket["id"] = str(created_ticket["_id"])
+        del created_ticket["_id"]
         
         return Ticket(**created_ticket)
     except Exception as e:
@@ -150,7 +156,8 @@ async def get_ticket(ticket_id: str):
                 detail="Ticket not found"
             )
         
-        ticket["_id"] = str(ticket["_id"])
+        ticket["id"] = str(ticket["_id"])
+        del ticket["_id"]
         return Ticket(**ticket)
     except HTTPException:
         raise
