@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 from models import Ticket, TicketCreate, TicketStatus
 import os
 from dotenv import load_dotenv
+import uuid
 
 # Load environment variables from .env file
 load_dotenv()
@@ -90,6 +91,8 @@ async def get_tickets():
                 ticket["priority"] = "medium"
             if "location" not in ticket:
                 ticket["location"] = "N/A"
+            if "access_token" not in ticket:
+                ticket["access_token"] = str(uuid.uuid4())
             
             tickets.append(Ticket(**ticket))
         
@@ -112,10 +115,13 @@ async def create_ticket(ticket: TicketCreate):
         ticket: Ticket data to create
         
     Returns:
-        The created ticket with generated ID and timestamps
+        The created ticket with generated ID and access token
     """
     try:
         tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Generate unique access token
+        access_token = str(uuid.uuid4())
         
         # Prepare ticket document with timestamps
         ticket_doc = {
@@ -128,6 +134,7 @@ async def create_ticket(ticket: TicketCreate):
             "priority": ticket.priority,
             "location": ticket.location,
             "status": ticket.status,
+            "access_token": access_token,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
@@ -179,6 +186,40 @@ async def get_ticket(ticket_id: str):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ticket not found"
+            )
+        
+        ticket["id"] = str(ticket["_id"])
+        del ticket["_id"]
+        return Ticket(**ticket)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving ticket: {str(e)}"
+        )
+
+
+@app.get("/tickets/token/{access_token}", response_model=Ticket)
+async def get_ticket_by_token(access_token: str):
+    """
+    Retrieve a specific ticket by access token (without authentication).
+    
+    Args:
+        access_token: The unique access token for the ticket
+        
+    Returns:
+        The requested ticket if token is valid
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        ticket = await tickets_collection.find_one({"access_token": access_token})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found with this token"
             )
         
         ticket["id"] = str(ticket["_id"])

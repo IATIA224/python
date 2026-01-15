@@ -7,6 +7,12 @@ export default function Dashboard() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [submittedTicket, setSubmittedTicket] = useState(null)
+  const [viewMode, setViewMode] = useState('submit') // 'submit', 'view', 'search'
+  const [searchToken, setSearchToken] = useState('')
+  const [searchedTicket, setSearchedTicket] = useState(null)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [formData, setFormData] = useState({
     reporter_name: '',
     reporter_email: '',
@@ -19,7 +25,6 @@ export default function Dashboard() {
     status: 'open'
   })
   const [submitting, setSubmitting] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
 
   // Fetch tickets on component mount
   useEffect(() => {
@@ -54,6 +59,34 @@ export default function Dashboard() {
       ...prev,
       [name]: value
     }))
+  }
+
+  // Search ticket by token
+  const handleSearchTicket = async (e) => {
+    e.preventDefault()
+    
+    if (!searchToken.trim()) {
+      setError('Please enter a ticket token')
+      return
+    }
+
+    try {
+      setSearchLoading(true)
+      setError(null)
+      const response = await fetch(`${API_BASE_URL}/tickets/token/${searchToken}`)
+      
+      if (!response.ok) {
+        throw new Error('Ticket not found with this token')
+      }
+      
+      const data = await response.json()
+      setSearchedTicket(data)
+    } catch (err) {
+      setError(err.message)
+      setSearchedTicket(null)
+    } finally {
+      setSearchLoading(false)
+    }
   }
 
   // Handle form submission to create a new ticket
@@ -96,9 +129,9 @@ export default function Dashboard() {
         location: '',
         status: 'open'
       })
+      setSubmittedTicket(response)
       setSuccessMessage('Issue submitted successfully!')
       setTimeout(() => setSuccessMessage(''), 5000)
-      await fetchTickets()
     } catch (err) {
       setError(err.message)
       console.error('Error creating ticket:', err)
@@ -186,7 +219,81 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="dashboard-content">
+      {/* Success Modal with Token */}
+      {submittedTicket && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h2>✅ Issue Submitted Successfully!</h2>
+              <button className="modal-close" onClick={() => setSubmittedTicket(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Your issue has been submitted. Save this token to view your report anytime:</p>
+              <div className="token-box">
+                <input 
+                  type="text" 
+                  value={submittedTicket?.access_token || ''} 
+                  readOnly 
+                  className="token-input"
+                />
+                <button 
+                  className="btn btn-copy"
+                  onClick={() => {
+                    navigator.clipboard.writeText(submittedTicket.access_token)
+                    alert('Token copied to clipboard!')
+                  }}
+                >
+                  📋 Copy Token
+                </button>
+              </div>
+              <p className="token-note">🔒 Share this token with support staff or use it to check your report status</p>
+              <div className="ticket-preview">
+                <h3>{submittedTicket?.title}</h3>
+                <p><strong>Reference ID:</strong> {submittedTicket?.id?.substring(0, 8).toUpperCase()}</p>
+                <p><strong>Status:</strong> {submittedTicket?.status}</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  setSubmittedTicket(null)
+                  setViewMode('search')
+                  setSearchToken(submittedTicket?.access_token || '')
+                }}
+              >
+                View My Report
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setSubmittedTicket(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mode Tabs */}
+      <div className="mode-tabs">
+        <button 
+          className={`tab-btn ${viewMode === 'submit' ? 'active' : ''}`}
+          onClick={() => setViewMode('submit')}
+        >
+          📝 Submit Issue
+        </button>
+        <button 
+          className={`tab-btn ${viewMode === 'search' ? 'active' : ''}`}
+          onClick={() => setViewMode('search')}
+        >
+          🔍 View My Report
+        </button>
+      </div>
+
+      {/* Submit Mode */}
+      {viewMode === 'submit' && (
+        <div className="dashboard-content">
         {/* Issue Submission Form */}
         <section className="create-ticket-section">
           <h2>📝 Submit New Issue</h2>
@@ -408,6 +515,94 @@ export default function Dashboard() {
           )}
         </section>
       </div>
+      )}
+
+      {/* Search Mode */}
+      {viewMode === 'search' && (
+        <div className="search-section">
+          <div className="search-container">
+            <h2>🔍 View Your Report</h2>
+            <p>Enter the token you received when submitting your issue</p>
+            
+            <form onSubmit={handleSearchTicket} className="search-form">
+              <div className="form-group">
+                <label htmlFor="searchToken">Ticket Token</label>
+                <input
+                  type="text"
+                  id="searchToken"
+                  value={searchToken}
+                  onChange={(e) => setSearchToken(e.target.value)}
+                  placeholder="Paste your token here"
+                  disabled={searchLoading}
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={searchLoading}
+              >
+                {searchLoading ? '🔄 Searching...' : '🔍 Search'}
+              </button>
+            </form>
+
+            {searchedTicket && (
+              <div className="ticket-card ticket-card-full">
+                <div className="ticket-header">
+                  <div className="ticket-title-section">
+                    <h3>{searchedTicket.title}</h3>
+                    <div className="ticket-meta-tags">
+                      <span className="category-badge">{getCategoryLabel(searchedTicket.category)}</span>
+                    </div>
+                  </div>
+                  <div className="ticket-badges">
+                    <span 
+                      className="badge priority-badge"
+                      style={{ backgroundColor: getPriorityColor(searchedTicket.priority) }}
+                    >
+                      {searchedTicket.priority}
+                    </span>
+                    <span 
+                      className="badge status-badge"
+                      style={{ backgroundColor: getStatusColor(searchedTicket.status) }}
+                    >
+                      {searchedTicket.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="ticket-description">{searchedTicket.description}</p>
+
+                <div className="ticket-details">
+                  <div className="detail-item">
+                    <strong>Reporter:</strong> {searchedTicket.reporter_name}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Email:</strong> {searchedTicket.reporter_email}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Department:</strong> {searchedTicket.reporter_department}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Location:</strong> {searchedTicket.location}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Reference ID:</strong> {searchedTicket.id.substring(0, 8).toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="ticket-footer">
+                  <small className="ticket-date">
+                    Submitted: {formatDate(searchedTicket.created_at)}
+                  </small>
+                  <small className="ticket-date">
+                    Last Updated: {formatDate(searchedTicket.updated_at)}
+                  </small>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

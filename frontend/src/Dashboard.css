@@ -8,6 +8,247 @@
   background-color: #f5f7fa;
 }
 
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  justify-content: center;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #666;
+}
+
+.tab-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 25px;
+  border-bottom: 2px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.modal-body p {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.token-box {
+  background: #f5f7fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  display: flex;
+  gap: 10px;
+}
+
+.token-input {
+  flex: 1;
+  border: none;
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.btn-copy {
+  padding: 10px 15px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.btn-copy:hover {
+  background: #764ba2;
+  transform: translateY(-2px);
+}
+
+.token-note {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 12px;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 0.9rem;
+  margin: 15px 0;
+}
+
+.ticket-preview {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  margin: 15px 0;
+}
+
+.ticket-preview h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.ticket-preview p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.modal-footer {
+  padding: 20px 25px;
+  border-top: 2px solid #f0f0f0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-footer .btn {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+}
+
+/* Search Section */
+.search-section {
+  margin: 30px 0;
+}
+
+.search-container {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-container h2 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.search-container p {
+  color: #666;
+  margin: 0 0 25px 0;
+}
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.search-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.search-form label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.search-form input {
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.search-form input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.ticket-card-full {
+  margin-top: 30px;
+}
+
 .dashboard-header {
   text-align: center;
   margin-bottom: 40px;

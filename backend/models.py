@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from enum import Enum
+import uuid
 
 
 class TicketStatus(str, Enum):
@@ -51,6 +52,7 @@ class TicketCreate(TicketBase):
 class Ticket(TicketBase):
     """Full Ticket model with metadata"""
     id: str
+    access_token: str
     created_at: datetime
     updated_at: datetime
 
