@@ -190,12 +190,12 @@ export default function Dashboard() {
   // Get category label
   const getCategoryLabel = (category) => {
     const labels = {
-      furniture: '🪑 Furniture',
-      it_equipment: '💻 IT Equipment',
-      facility: '🏢 Facility',
-      utilities: '⚡ Utilities',
-      safety: '🚨 Safety',
-      other: '📋 Other'
+      furniture: 'Furniture',
+      it_equipment: 'IT Equipment',
+      facility: 'Facility',
+      utilities: 'Utilities',
+      safety: 'Safety',
+      other: 'Other'
     }
     return labels[category] || category
   }
@@ -203,7 +203,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>� Employee Issue Submission Portal</h1>
+        <h1>Employee Issue Submission Portal</h1>
         <p>Report workplace issues and track their resolution</p>
       </header>
 
@@ -224,7 +224,7 @@ export default function Dashboard() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h2>✅ Issue Submitted Successfully!</h2>
+              <h2>Issue Submitted Successfully!</h2>
               <button className="modal-close" onClick={() => setSubmittedTicket(null)}>×</button>
             </div>
             <div className="modal-body">
@@ -243,10 +243,10 @@ export default function Dashboard() {
                     alert('Token copied to clipboard!')
                   }}
                 >
-                  📋 Copy Token
+                  Copy Token
                 </button>
               </div>
-              <p className="token-note">🔒 Share this token with support staff or use it to check your report status</p>
+              <p className="token-note">Keep this token secure. Share it with support staff or use it to check your report status.</p>
               <div className="ticket-preview">
                 <h3>{submittedTicket?.title}</h3>
                 <p><strong>Reference ID:</strong> {submittedTicket?.id?.substring(0, 8).toUpperCase()}</p>
@@ -281,13 +281,13 @@ export default function Dashboard() {
           className={`tab-btn ${viewMode === 'submit' ? 'active' : ''}`}
           onClick={() => setViewMode('submit')}
         >
-          📝 Submit Issue
+          Submit Issue
         </button>
         <button 
           className={`tab-btn ${viewMode === 'search' ? 'active' : ''}`}
           onClick={() => setViewMode('search')}
         >
-          🔍 View My Report
+          View My Report
         </button>
       </div>
 
@@ -296,7 +296,7 @@ export default function Dashboard() {
         <div className="dashboard-content">
         {/* Issue Submission Form */}
         <section className="create-ticket-section">
-          <h2>📝 Submit New Issue</h2>
+          <h2>Submit New Issue</h2>
           <form onSubmit={handleSubmit} className="ticket-form">
             
             {/* Reporter Information */}
@@ -387,12 +387,12 @@ export default function Dashboard() {
                     disabled={submitting}
                     required
                   >
-                    <option value="furniture">🪑 Furniture</option>
-                    <option value="it_equipment">💻 IT Equipment</option>
-                    <option value="facility">🏢 Facility</option>
-                    <option value="utilities">⚡ Utilities</option>
-                    <option value="safety">🚨 Safety</option>
-                    <option value="other">📋 Other</option>
+                    <option value="furniture">Furniture</option>
+                    <option value="it_equipment">IT Equipment</option>
+                    <option value="facility">Facility</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="safety">Safety</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
 
@@ -434,7 +434,7 @@ export default function Dashboard() {
               className="btn btn-primary btn-large"
               disabled={submitting}
             >
-              {submitting ? '⏳ Submitting...' : '✓ Submit Issue'}
+              {submitting ? 'Submitting...' : 'Submit Issue'}
             </button>
           </form>
         </section>
@@ -442,13 +442,13 @@ export default function Dashboard() {
         {/* Tickets List */}
         <section className="tickets-section">
           <div className="section-header">
-            <h2>📋 My Issues ({tickets.length})</h2>
+            <h2>My Issues ({tickets.length})</h2>
             <button 
               className="btn btn-secondary"
               onClick={fetchTickets}
               disabled={loading}
             >
-              {loading ? 'Refreshing...' : '🔄 Refresh'}
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
 
@@ -521,7 +521,7 @@ export default function Dashboard() {
       {viewMode === 'search' && (
         <div className="search-section">
           <div className="search-container">
-            <h2>🔍 View Your Report</h2>
+            <h2>View Your Report</h2>
             <p>Enter the token you received when submitting your issue</p>
             
             <form onSubmit={handleSearchTicket} className="search-form">
@@ -541,7 +541,7 @@ export default function Dashboard() {
                 className="btn btn-primary"
                 disabled={searchLoading}
               >
-                {searchLoading ? '🔄 Searching...' : '🔍 Search'}
+                {searchLoading ? 'Searching...' : 'Search'}
               </button>
             </form>
 
