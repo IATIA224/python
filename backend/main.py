@@ -76,10 +76,27 @@ async def get_tickets():
             # Convert MongoDB _id ObjectId to string and rename to id
             ticket["id"] = str(ticket["_id"])
             del ticket["_id"]
+            
+            # Provide defaults for backward compatibility with old documents
+            if "reporter_name" not in ticket:
+                ticket["reporter_name"] = "Unknown"
+            if "reporter_email" not in ticket:
+                ticket["reporter_email"] = "unknown@example.com"
+            if "reporter_department" not in ticket:
+                ticket["reporter_department"] = "N/A"
+            if "category" not in ticket:
+                ticket["category"] = "other"
+            if "priority" not in ticket:
+                ticket["priority"] = "medium"
+            if "location" not in ticket:
+                ticket["location"] = "N/A"
+            
             tickets.append(Ticket(**ticket))
         
         return tickets
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving tickets: {str(e)}"
@@ -102,8 +119,14 @@ async def create_ticket(ticket: TicketCreate):
         
         # Prepare ticket document with timestamps
         ticket_doc = {
+            "reporter_name": ticket.reporter_name,
+            "reporter_email": ticket.reporter_email,
+            "reporter_department": ticket.reporter_department,
             "title": ticket.title,
             "description": ticket.description,
+            "category": ticket.category,
+            "priority": ticket.priority,
+            "location": ticket.location,
             "status": ticket.status,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -119,6 +142,8 @@ async def create_ticket(ticket: TicketCreate):
         
         return Ticket(**created_ticket)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating ticket: {str(e)}"
