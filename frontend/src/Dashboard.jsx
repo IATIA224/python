@@ -555,12 +555,6 @@ export default function Dashboard() {
                       >
                         {ticket.priority}
                       </span>
-                      <span 
-                        className="status-badge"
-                        style={{ backgroundColor: getStatusColor(ticket.status) }}
-                      >
-                        {ticket.status.replace('_', ' ')}
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -608,12 +602,6 @@ export default function Dashboard() {
                         >
                           {ticket.priority}
                         </span>
-                        <span 
-                          className="status-badge"
-                          style={{ backgroundColor: getStatusColor(ticket.status) }}
-                        >
-                          {ticket.status.replace('_', ' ')}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -644,12 +632,6 @@ export default function Dashboard() {
                   style={{ backgroundColor: getPriorityColor(selectedTicket.priority) }}
                 >
                   {selectedTicket.priority}
-                </span>
-                <span 
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusColor(selectedTicket.status) }}
-                >
-                  {selectedTicket.status.replace('_', ' ')}
                 </span>
                 {selectedTicket.category && (
                   <span className="category-badge">{getCategoryLabel(selectedTicket.category)}</span>

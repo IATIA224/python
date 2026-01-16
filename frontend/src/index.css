@@ -68,15 +68,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: clamp(1.2rem, 4vw, 2rem);
 }
 
 h3 {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 3vw, 1.5rem);
+}
+
+h4 {
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+}
+
+h5, h6 {
+  font-size: clamp(0.8rem, 2vw, 1rem);
+}
+
+p {
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
 }
 
 button {
@@ -86,10 +98,12 @@ button {
   transition: all 0.3s ease;
   border-radius: 6px;
   font-weight: 600;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
 }
 
 input, textarea, select {
   font-family: inherit;
+  font-size: 1rem; /* Prevents zoom on iOS when input is focused */
 }
 
 /* Scrollbar Styling */
