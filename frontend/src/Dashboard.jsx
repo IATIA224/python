@@ -24,6 +24,8 @@ export default function Dashboard() {
     image_data: null
   })
   const [submitting, setSubmitting] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState(null) // For modal
+  const [selectedTicketSource, setSelectedTicketSource] = useState(null) // 'all' or 'my'
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
@@ -536,57 +538,30 @@ export default function Dashboard() {
           ) : (
             <div className="tickets-list">
               {tickets.map(ticket => (
-                <div key={ticket.id} className="ticket-card">
-                  <div className="ticket-header">
-                    <div className="ticket-title-section">
-                      <h3>{ticket.title}</h3>
-                      <div className="ticket-meta-tags">
-                        <span className="category-badge">{getCategoryLabel(ticket.category)}</span>
-                      </div>
-                    </div>
+                <div 
+                  key={ticket.id} 
+                  className="ticket-card ticket-card-compact"
+                  onClick={() => {
+                    setSelectedTicket(ticket)
+                    setSelectedTicketSource('all')
+                  }}
+                >
+                  <div className="ticket-header-compact">
+                    <h3>{ticket.title}</h3>
                     <div className="ticket-badges">
                       <span 
-                        className="badge priority-badge"
+                        className="priority-badge"
                         style={{ backgroundColor: getPriorityColor(ticket.priority) }}
                       >
                         {ticket.priority}
                       </span>
                       <span 
-                        className="badge status-badge"
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(ticket.status) }}
                       >
                         {ticket.status.replace('_', ' ')}
                       </span>
                     </div>
-                  </div>
-
-                  <p className="ticket-description">{ticket.description}</p>
-
-                  {ticket.image_data && (
-                    <div className="ticket-image">
-                      <img src={ticket.image_data} alt={ticket.title} />
-                    </div>
-                  )}
-
-                  <div className="ticket-details">
-                    <div className="detail-item">
-                      <strong>Reporter:</strong> {ticket.reporter_name} ({ticket.reporter_email})
-                    </div>
-                    <div className="detail-item">
-                      <strong>Department:</strong> {ticket.reporter_department}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Location:</strong> {ticket.location}
-                    </div>
-                  </div>
-
-                  <div className="ticket-footer">
-                    <small className="ticket-meta">
-                      ID: {ticket.id.substring(0, 8)}...
-                    </small>
-                    <small className="ticket-date">
-                      Submitted: {formatDate(ticket.created_at)}
-                    </small>
                   </div>
                 </div>
               ))}
@@ -616,54 +591,30 @@ export default function Dashboard() {
             ) : (
               <div className="my-tickets-list">
                 {myTickets.map((ticket, index) => (
-                  <div key={index} className="ticket-card ticket-card-full">
-                    <div className="ticket-header">
-                      <div className="ticket-title-section">
-                        <h3>{ticket.title}</h3>
-                        <div className="ticket-meta-tags">
-                          <span className="category-badge">{getCategoryLabel(ticket.category)}</span>
-                        </div>
-                      </div>
+                  <div 
+                    key={index} 
+                    className="ticket-card ticket-card-compact"
+                    onClick={() => {
+                      setSelectedTicket(ticket)
+                      setSelectedTicketSource('my')
+                    }}
+                  >
+                    <div className="ticket-header-compact">
+                      <h3>{ticket.title}</h3>
                       <div className="ticket-badges">
                         <span 
-                          className="badge priority-badge"
+                          className="priority-badge"
                           style={{ backgroundColor: getPriorityColor(ticket.priority) }}
                         >
                           {ticket.priority}
                         </span>
                         <span 
-                          className="badge status-badge"
+                          className="status-badge"
                           style={{ backgroundColor: getStatusColor(ticket.status) }}
                         >
                           {ticket.status.replace('_', ' ')}
                         </span>
                       </div>
-                    </div>
-
-                    <p className="ticket-description">{ticket.description}</p>
-
-                    {ticket.image_data && (
-                      <div className="ticket-image">
-                        <img src={ticket.image_data} alt={ticket.title} />
-                      </div>
-                    )}
-
-                    <div className="ticket-details">
-                      <div className="detail-item">
-                        <strong>Reference ID:</strong> {ticket.id.substring(0, 8).toUpperCase()}
-                      </div>
-                      <div className="detail-item">
-                        <strong>Location:</strong> {ticket.location}
-                      </div>
-                      <div className="detail-item">
-                        <strong>Department:</strong> {ticket.reporter_department}
-                      </div>
-                    </div>
-
-                    <div className="ticket-footer">
-                      <small className="ticket-date">
-                        Submitted: {formatDate(ticket.submittedAt || ticket.created_at)}
-                      </small>
                     </div>
                   </div>
                 ))}
@@ -672,6 +623,83 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Ticket Details Modal */}
+      {selectedTicket && (
+        <div className="modal-overlay" onClick={() => setSelectedTicket(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <button 
+              className="modal-close"
+              onClick={() => setSelectedTicket(null)}
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+
+            <div className="modal-header">
+              <h2>{selectedTicket.title}</h2>
+              <div className="ticket-badges">
+                <span 
+                  className="priority-badge"
+                  style={{ backgroundColor: getPriorityColor(selectedTicket.priority) }}
+                >
+                  {selectedTicket.priority}
+                </span>
+                <span 
+                  className="status-badge"
+                  style={{ backgroundColor: getStatusColor(selectedTicket.status) }}
+                >
+                  {selectedTicket.status.replace('_', ' ')}
+                </span>
+                {selectedTicket.category && (
+                  <span className="category-badge">{getCategoryLabel(selectedTicket.category)}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-section">
+                <h3>Description</h3>
+                <p>{selectedTicket.description}</p>
+              </div>
+
+              {selectedTicket.image_data && (
+                <div className="modal-section">
+                  <h3>Attached Image</h3>
+                  <img src={selectedTicket.image_data} alt={selectedTicket.title} className="modal-image" />
+                </div>
+              )}
+
+              <div className="modal-section modal-grid">
+                <div className="modal-item">
+                  <strong>Reporter</strong>
+                  <p>{selectedTicket.reporter_name}</p>
+                  <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>{selectedTicket.reporter_email}</p>
+                </div>
+                <div className="modal-item">
+                  <strong>Department</strong>
+                  <p>{selectedTicket.reporter_department}</p>
+                </div>
+                <div className="modal-item">
+                  <strong>Location</strong>
+                  <p>{selectedTicket.location}</p>
+                </div>
+                <div className="modal-item">
+                  <strong>Submitted</strong>
+                  <p>{formatDate(selectedTicket.created_at || selectedTicket.submittedAt)}</p>
+                </div>
+              </div>
+
+              {selectedTicket.id && (
+                <div className="modal-section">
+                  <strong>ID:</strong> {selectedTicket.id.substring(0, 8).toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
