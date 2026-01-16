@@ -42,6 +42,7 @@ class TicketBase(BaseModel):
     priority: IssuePriority = IssuePriority.MEDIUM
     location: str = Field(..., min_length=1, max_length=200)
     status: TicketStatus = TicketStatus.OPEN
+    image_data: Optional[str] = None  # Base64 encoded image data
 
 
 class TicketCreate(TicketBase):

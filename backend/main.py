@@ -134,6 +134,7 @@ async def create_ticket(ticket: TicketCreate):
             "priority": ticket.priority,
             "location": ticket.location,
             "status": ticket.status,
+            "image_data": ticket.image_data,
             "access_token": access_token,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()

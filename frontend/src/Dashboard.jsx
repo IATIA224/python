@@ -20,7 +20,8 @@ export default function Dashboard() {
     category: 'furniture',
     priority: 'medium',
     location: '',
-    status: 'open'
+    status: 'open',
+    image_data: null
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -86,6 +87,37 @@ export default function Dashboard() {
       ...prev,
       [name]: value
     }))
+  }
+
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB')
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setFormData(prev => ({
+          ...prev,
+          image_data: event.target.result
+        }))
+        setError(null)
+      }
+      reader.onerror = () => {
+        setError('Failed to read the image file')
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   // Search ticket by token
@@ -163,7 +195,8 @@ export default function Dashboard() {
         category: 'furniture',
         priority: 'medium',
         location: '',
-        status: 'open'
+        status: 'open',
+        image_data: null
       })
       
       setTimeout(() => setSuccessMessage(''), 5000)
@@ -398,6 +431,24 @@ export default function Dashboard() {
                 />
               </div>
 
+              <div className="form-group">
+                <label htmlFor="image_data">Attach Image (optional)</label>
+                <input
+                  type="file"
+                  id="image_data"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={submitting}
+                />
+                <small>Upload a picture of the issue (e.g., broken chair). Max 5MB.</small>
+                {formData.image_data && (
+                  <div className="image-preview">
+                    <p className="preview-text">✓ Image selected</p>
+                    <img src={formData.image_data} alt="Preview" className="preview-img" />
+                  </div>
+                )}
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="category">Category *</label>
@@ -511,6 +562,12 @@ export default function Dashboard() {
 
                   <p className="ticket-description">{ticket.description}</p>
 
+                  {ticket.image_data && (
+                    <div className="ticket-image">
+                      <img src={ticket.image_data} alt={ticket.title} />
+                    </div>
+                  )}
+
                   <div className="ticket-details">
                     <div className="detail-item">
                       <strong>Reporter:</strong> {ticket.reporter_name} ({ticket.reporter_email})
@@ -584,6 +641,12 @@ export default function Dashboard() {
                     </div>
 
                     <p className="ticket-description">{ticket.description}</p>
+
+                    {ticket.image_data && (
+                      <div className="ticket-image">
+                        <img src={ticket.image_data} alt={ticket.title} />
+                      </div>
+                    )}
 
                     <div className="ticket-details">
                       <div className="detail-item">

@@ -535,6 +535,35 @@
   min-height: 100px;
 }
 
+/* Image Preview Styles */
+.image-preview {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+}
+
+.preview-text {
+  margin: 0 0 8px 0;
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.preview-img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.form-group small {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
 /* Button Styles */
 .btn {
   padding: 12px 24px;
@@ -726,6 +755,22 @@
   color: #666;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.ticket-image {
+  margin: 15px 0;
+  padding: 12px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.ticket-image img {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 4px;
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .ticket-details {
