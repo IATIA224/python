@@ -253,7 +253,7 @@
 /* ==================== DASHBOARD CONTENT ==================== */
 .dashboard-content {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: 1fr 1.2fr;
   gap: 20px;
   padding: 20px;
   max-width: 100%;
@@ -261,9 +261,9 @@
   overflow: hidden;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .dashboard-content {
-    grid-template-columns: 350px 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
     padding: 15px;
   }
@@ -279,7 +279,7 @@
 /* ==================== FORM SECTION ==================== */
 .create-ticket-section {
   background: white;
-  padding: 30px;
+  padding: 25px;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow-y: auto;
@@ -287,6 +287,7 @@
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-300) transparent;
+  min-height: 0;
 }
 
 .create-ticket-section::-webkit-scrollbar {
@@ -303,17 +304,18 @@
 }
 
 .create-ticket-section h2 {
-  margin: 0 0 25px 0;
+  margin: 0 0 20px 0;
   color: var(--gray-900);
-  font-size: 1.4rem;
-  padding-bottom: 15px;
+  font-size: 1.25rem;
+  padding-bottom: 12px;
   border-bottom: 3px solid var(--primary-color);
+  flex-shrink: 0;
 }
 
 .ticket-form {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 18px;
 }
 
 .form-fieldset {
@@ -325,8 +327,8 @@
 .form-fieldset legend {
   font-weight: 600;
   color: var(--gray-700);
-  margin-bottom: 15px;
-  font-size: 0.95rem;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -334,7 +336,7 @@
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 12px;
 }
 
 @media (max-width: 768px) {
@@ -349,19 +351,19 @@
 }
 
 .form-group label {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-weight: 600;
   color: var(--gray-900);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
-  padding: 12px 15px;
+  padding: 10px 12px;
   border: 1px solid var(--gray-300);
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-family: inherit;
   transition: all 0.3s ease;
   background: white;
@@ -396,7 +398,7 @@
 
 .form-group textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 80px;
   font-family: inherit;
 }
 
@@ -452,7 +454,8 @@
   background: var(--primary-color);
   color: white;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 5px;
+  padding: 12px 20px;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -489,7 +492,7 @@
 /* ==================== TICKETS SECTION ==================== */
 .tickets-section {
   background: white;
-  padding: 30px;
+  padding: 25px;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow-y: auto;
@@ -497,6 +500,7 @@
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-300) transparent;
+  min-height: 0;
 }
 
 .tickets-section::-webkit-scrollbar {
@@ -516,8 +520,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
   border-bottom: 3px solid var(--primary-color);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -527,7 +531,7 @@
 .section-header h2 {
   margin: 0;
   color: var(--gray-900);
-  font-size: 1.4rem;
+  font-size: 1.25rem;
 }
 
 /* ==================== TICKETS LIST ==================== */
@@ -542,7 +546,7 @@
 .ticket-card {
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 20px;
+  padding: 15px;
   transition: all 0.3s ease;
   background: white;
   cursor: pointer;
@@ -568,9 +572,9 @@
 }
 
 .ticket-header h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: var(--gray-900);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   word-break: break-word;
 }
 
@@ -622,10 +626,11 @@
 }
 
 .ticket-description {
-  margin: 12px 0;
+  margin: 10px 0;
   color: var(--gray-700);
-  line-height: 1.6;
+  line-height: 1.5;
   word-break: break-word;
+  font-size: 0.9rem;
 }
 
 .ticket-image {
@@ -638,7 +643,7 @@
 
 .ticket-image img {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 300px;
   border-radius: 4px;
   object-fit: contain;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -646,17 +651,17 @@
 
 .ticket-details {
   background: var(--gray-50);
-  padding: 12px;
+  padding: 10px;
   border-radius: 6px;
-  margin: 15px 0;
+  margin: 12px 0;
   border-left: 3px solid var(--primary-light);
 }
 
 .detail-item {
-  padding: 6px 0;
+  padding: 4px 0;
   color: var(--gray-700);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .detail-item strong {
@@ -668,9 +673,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 15px;
-  padding-top: 15px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--gray-200);
+  font-size: 0.8rem;
 }
 
 .ticket-meta {
