@@ -222,7 +222,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="admin-header">
         <div className="header-content">
-          <h1>🛡️ Admin Dashboard</h1>
+          <h1>Admin Dashboard</h1>
           <p>Manage all support tickets and reports</p>
         </div>
       </header>
@@ -231,35 +231,35 @@ export default function AdminDashboard() {
       <section className="stats-section">
         <div className="stats-grid">
           <div className="stat-card total">
-            <div className="stat-icon">📊</div>
+            <div className="stat-icon">●</div>
             <div className="stat-content">
               <h3>{stats.total}</h3>
               <p>Total Tickets</p>
             </div>
           </div>
           <div className="stat-card open">
-            <div className="stat-icon">🔴</div>
+            <div className="stat-icon">●</div>
             <div className="stat-content">
               <h3>{stats.open}</h3>
               <p>Open</p>
             </div>
           </div>
           <div className="stat-card in-progress">
-            <div className="stat-icon">🟡</div>
+            <div className="stat-icon">●</div>
             <div className="stat-content">
               <h3>{stats.inProgress}</h3>
               <p>In Progress</p>
             </div>
           </div>
           <div className="stat-card resolved">
-            <div className="stat-icon">🟢</div>
+            <div className="stat-icon">●</div>
             <div className="stat-content">
               <h3>{stats.resolved}</h3>
               <p>Resolved</p>
             </div>
           </div>
           <div className="stat-card closed">
-            <div className="stat-icon">⚫</div>
+            <div className="stat-icon">●</div>
             <div className="stat-content">
               <h3>{stats.closed}</h3>
               <p>Closed</p>
@@ -271,13 +271,13 @@ export default function AdminDashboard() {
       {/* Alerts */}
       {error && (
         <div className="alert alert-error">
-          <span>⚠️</span>
+          <span className="alert-icon">!</span>
           <span>{error}</span>
         </div>
       )}
       {successMessage && (
         <div className="alert alert-success">
-          <span>✅</span>
+          <span className="alert-icon">✓</span>
           <span>{successMessage}</span>
         </div>
       )}
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
           <div className="search-box">
             <input
               type="text"
-              placeholder="🔍 Search tickets..."
+              placeholder="Search tickets by title, reporter, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
           </div>
 
           <button onClick={fetchTickets} className="refresh-btn" disabled={loading}>
-            🔄 Refresh
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </section>
@@ -405,14 +405,14 @@ export default function AdminDashboard() {
                         className="action-btn view-btn"
                         title="View Details"
                       >
-                        👁️
+                        View
                       </button>
                       <button 
                         onClick={() => setDeleteConfirm(ticket.id)}
                         className="action-btn delete-btn"
                         title="Delete Ticket"
                       >
-                        🗑️
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -429,8 +429,8 @@ export default function AdminDashboard() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Ticket Details</h2>
-              <button onClick={() => setSelectedTicket(null)} className="close-btn">
-                ✕
+              <button onClick={() => setSelectedTicket(null)} className="close-btn" title="Close">
+                ×
               </button>
             </div>
 
@@ -565,9 +565,9 @@ export default function AdminDashboard() {
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>⚠️ Confirm Deletion</h2>
-              <button onClick={() => setDeleteConfirm(null)} className="close-btn">
-                ✕
+              <h2>Confirm Deletion</h2>
+              <button onClick={() => setDeleteConfirm(null)} className="close-btn" title="Close">
+                ×
               </button>
             </div>
             <div className="modal-body">
