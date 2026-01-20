@@ -48,7 +48,7 @@ async def startup_db():
 @app.on_event("shutdown")
 async def shutdown_db():
     """Close MongoDB connection on shutdown"""
-    if db:
+    if db is not None:
         db.client.close()
         print("Disconnected from MongoDB")
 
