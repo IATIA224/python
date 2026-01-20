@@ -4,9 +4,12 @@
   "description": "Full-stack ticketing system using FARM stack",
   "scripts": {
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev:admin": "concurrently \"npm run backend\" \"npm run frontend:admin\"",
     "backend": "cd backend && python -m uvicorn main:app --reload",
     "frontend": "cd frontend && npm run dev",
+    "frontend:admin": "cd frontend_admin && npm run dev",
     "build": "cd frontend && npm run build",
+    "build:admin": "cd frontend_admin && npm run build",
     "preview": "cd frontend && npm run preview"
   },
   "devDependencies": {

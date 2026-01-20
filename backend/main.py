@@ -21,7 +21,7 @@ app = FastAPI(
 # Add CORS middleware to allow React frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite dev server and production URLs
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],  # User, production, and admin URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -232,6 +232,116 @@ async def get_ticket_by_token(access_token: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving ticket: {str(e)}"
+        )
+
+
+@app.patch("/tickets/{ticket_id}", response_model=Ticket)
+async def update_ticket(ticket_id: str, status_update: dict):
+    """
+    Update a ticket's status.
+    
+    Args:
+        ticket_id: The MongoDB ObjectId of the ticket
+        status_update: Dictionary containing the new status
+        
+    Returns:
+        The updated ticket
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Convert string ID to ObjectId
+        try:
+            obj_id = ObjectId(ticket_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+        
+        # Validate status value
+        new_status = status_update.get("status")
+        if new_status:
+            try:
+                TicketStatus(new_status)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid status value. Must be one of: {', '.join([s.value for s in TicketStatus])}"
+                )
+        
+        # Update the ticket
+        update_data = {"updated_at": datetime.utcnow()}
+        if new_status:
+            update_data["status"] = new_status
+        
+        result = await tickets_collection.update_one(
+            {"_id": obj_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Retrieve and return the updated ticket
+        updated_ticket = await tickets_collection.find_one({"_id": obj_id})
+        updated_ticket["id"] = str(updated_ticket["_id"])
+        del updated_ticket["_id"]
+        
+        return Ticket(**updated_ticket)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating ticket: {str(e)}"
+        )
+
+
+@app.delete("/tickets/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_ticket(ticket_id: str):
+    """
+    Delete a ticket by ID.
+    
+    Args:
+        ticket_id: The MongoDB ObjectId of the ticket to delete
+        
+    Returns:
+        No content (204 status code)
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Convert string ID to ObjectId
+        try:
+            obj_id = ObjectId(ticket_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+        
+        # Delete the ticket
+        result = await tickets_collection.delete_one({"_id": obj_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting ticket: {str(e)}"
         )
 
 
