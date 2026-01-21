@@ -17,7 +17,7 @@ export default function NotificationCenter({ onNewResponse }) {
     const interval = setInterval(checkForNewResponses, pollInterval)
     
     return () => clearInterval(interval)
-  }, [pollInterval])
+  }, [])
 
   // Load notifications from localStorage
   const loadNotifications = () => {
@@ -41,6 +41,8 @@ export default function NotificationCenter({ onNewResponse }) {
       if (!myTickets) return
 
       const tickets = JSON.parse(myTickets)
+      const storedNotifications = localStorage.getItem('ticketNotifications')
+      const existingNotifications = storedNotifications ? JSON.parse(storedNotifications) : []
       
       for (const ticket of tickets) {
         try {
@@ -48,31 +50,33 @@ export default function NotificationCenter({ onNewResponse }) {
           if (response.ok) {
             const updatedTicket = await response.json()
             
-            // Check if there are new admin responses
+            // Check if there are new admin responses that are unread
             if (updatedTicket.admin_responses && updatedTicket.admin_responses.length > 0) {
-              const lastResponse = updatedTicket.admin_responses[updatedTicket.admin_responses.length - 1]
+              const unreadResponses = updatedTicket.admin_responses.filter(r => !r.is_read)
               
-              // Check if this response is new (not already in our notifications)
-              const isNewNotification = !notifications.find(
-                n => n.response_id === lastResponse.response_id
-              )
-              
-              if (isNewNotification) {
-                addNotification({
-                  response_id: lastResponse.response_id,
-                  ticket_id: ticket.id,
-                  ticket_title: ticket.title,
-                  admin_name: lastResponse.admin_name,
-                  response_text: lastResponse.response_text,
-                  created_at: lastResponse.created_at,
-                  read: false
-                })
+              unreadResponses.forEach(response => {
+                // Check if this response is already in our notifications
+                const alreadyExists = existingNotifications.find(
+                  n => n.response_id === response.response_id
+                )
                 
-                // Call the callback to notify parent
-                if (onNewResponse) {
-                  onNewResponse(lastResponse.response_id)
+                if (!alreadyExists) {
+                  addNotification({
+                    response_id: response.response_id,
+                    ticket_id: ticket.id,
+                    ticket_title: ticket.title,
+                    admin_name: response.admin_name,
+                    response_text: response.response_text,
+                    created_at: response.created_at,
+                    read: false
+                  })
+                  
+                  // Call the callback to notify parent
+                  if (onNewResponse) {
+                    onNewResponse(response.response_id)
+                  }
                 }
-              }
+              })
             }
           }
         } catch (err) {
@@ -116,19 +120,44 @@ export default function NotificationCenter({ onNewResponse }) {
     localStorage.setItem('ticketNotifications', JSON.stringify(updated))
   }
 
-  // Delete notification
+  // Delete notification and mark as read on backend
   const deleteNotification = (notificationId) => {
+    const notification = notifications.find(n => n.response_id === notificationId)
+    
+    // Mark as read on backend
+    if (notification && !notification.read) {
+      try {
+        fetch(`${API_BASE_URL}/tickets/${notification.ticket_id}/responses/mark-read/${notificationId}`, {
+          method: 'POST'
+        }).catch(err => console.error('Error marking response as read:', err))
+      } catch (err) {
+        console.error('Error:', err)
+      }
+    }
+    
     const updated = notifications.filter(n => n.response_id !== notificationId)
     setNotifications(updated)
-    const notification = notifications.find(n => n.response_id === notificationId)
     if (notification && !notification.read) {
       setUnreadCount(Math.max(0, unreadCount - 1))
     }
     localStorage.setItem('ticketNotifications', JSON.stringify(updated))
   }
 
-  // Clear all notifications
-  const clearAll = () => {
+  // Clear all notifications and mark them as read on backend
+  const clearAll = async () => {
+    // Mark all unread notifications as read on backend
+    const unreadNotifications = notifications.filter(n => !n.read)
+    
+    for (const notification of unreadNotifications) {
+      try {
+        await fetch(`${API_BASE_URL}/tickets/${notification.ticket_id}/responses/mark-read/${notification.response_id}`, {
+          method: 'POST'
+        })
+      } catch (err) {
+        console.error('Error marking response as read:', err)
+      }
+    }
+    
     setNotifications([])
     setUnreadCount(0)
     localStorage.removeItem('ticketNotifications')

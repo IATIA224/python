@@ -591,34 +591,150 @@
 /* ==================== TICKET UPDATE INDICATOR ==================== */
 .ticket-update-indicator {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  top: -10px;
+  right: -10px;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  font-size: 1.5rem;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   animation: updatePulse 2s ease-in-out infinite;
   z-index: 10;
+  border: 3px solid white;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 @keyframes updatePulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   }
   50% {
-    transform: scale(1.15);
-    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+    transform: scale(1.18);
+    box-shadow: 0 8px 28px rgba(249, 115, 22, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   }
 }
 
 .ticket-card:hover .ticket-update-indicator {
-  animation: updatePulse 1.5s ease-in-out infinite;
+  animation: updatePulse 1.3s ease-in-out infinite;
+  transform: scale(1.08);
+}
+
+.ticket-update-indicator:hover {
+  transform: scale(1.25);
+  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.8), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== UNREAD RESPONSE NOTIFIERS ==================== */
+.section-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.section-title-wrapper h2 {
+  margin: 0;
+}
+
+.unread-count-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+  animation: badgePulse 2s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.5);
+  }
+}
+
+.my-reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.my-reports-header h2 {
+  margin: 0 0 4px 0;
+}
+
+.my-reports-header p {
+  margin: 0;
+}
+
+.unread-alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fed7aa 0%, #fedd5c 50%, #fec563 100%);
+  border-left: 4px solid #f97316;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  animation: slideInDown 0.4s ease;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+  animation: bellRing 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes bellRing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(-8deg);
+  }
+  20% {
+    transform: rotate(8deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(8deg);
+  }
+}
+
+.alert-text {
+  color: #92400e;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .ticket-header {
@@ -1196,6 +1312,20 @@
   .modal-section {
     margin-bottom: 16px;
     padding-bottom: 16px;
+  }
+
+  .my-reports-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .unread-alert-banner {
+    width: 100%;
+  }
+
+  .section-title-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

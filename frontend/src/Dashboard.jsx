@@ -34,6 +34,16 @@ export default function Dashboard() {
     fetchTickets()
     loadMyTickets()
     checkForUnreadResponses()
+    
+    // Listen for storage changes (from other tabs or notification clearing)
+    const handleStorageChange = (e) => {
+      if (e.key === 'ticketNotifications' || e.key === null) {
+        checkForUnreadResponses()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   // Update local storage when selected ticket changes
@@ -600,7 +610,14 @@ export default function Dashboard() {
         {/* Tickets List */}
         <section className="tickets-section">
           <div className="section-header">
-            <h2>My Issues ({tickets.length})</h2>
+            <div className="section-title-wrapper">
+              <h2>My Issues ({tickets.length})</h2>
+              {Object.keys(unreadResponses).length > 0 && (
+                <span className="unread-count-badge">
+                  {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <button 
               className="btn btn-secondary"
               onClick={fetchTickets}
@@ -658,8 +675,20 @@ export default function Dashboard() {
       {viewMode === 'my-reports' && (
         <div className="search-section">
           <div className="search-container">
-            <h2>My Submitted Reports</h2>
-            <p>View all issues you've submitted from this device</p>
+            <div className="my-reports-header">
+              <div>
+                <h2>My Submitted Reports</h2>
+                <p>View all issues you've submitted from this device</p>
+              </div>
+              {Object.keys(unreadResponses).length > 0 && (
+                <div className="unread-alert-banner">
+                  <span className="alert-icon">🔔</span>
+                  <span className="alert-text">
+                    {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''} from admin
+                  </span>
+                </div>
+              )}
+            </div>
             
             {myTickets.length === 0 ? (
               <div className="empty-state">
