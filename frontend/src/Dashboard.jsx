@@ -27,12 +27,33 @@ export default function Dashboard() {
   const [submitting, setSubmitting] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null) // For modal
   const [selectedTicketSource, setSelectedTicketSource] = useState(null) // 'all' or 'my'
+  const [unreadResponses, setUnreadResponses] = useState({}) // Track unread responses by ticket ID
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
     fetchTickets()
     loadMyTickets()
+    checkForUnreadResponses()
   }, [])
+
+  // Update local storage when selected ticket changes
+  useEffect(() => {
+    if (selectedTicket && selectedTicketSource === 'my') {
+      try {
+        const stored = localStorage.getItem('mySubmittedTickets')
+        if (stored) {
+          const tickets = JSON.parse(stored)
+          const updatedTickets = tickets.map(t => 
+            t.id === selectedTicket.id ? selectedTicket : t
+          )
+          localStorage.setItem('mySubmittedTickets', JSON.stringify(updatedTickets))
+          setMyTickets(updatedTickets)
+        }
+      } catch (err) {
+        console.error('Error updating local storage:', err)
+      }
+    }
+  }, [selectedTicket, selectedTicketSource])
 
   // Load submitted tickets from localStorage
   const loadMyTickets = () => {
@@ -75,11 +96,42 @@ export default function Dashboard() {
       
       const data = await response.json()
       setTickets(data)
+      
+      // Check for unread responses after fetching
+      checkForUnreadResponses(data)
     } catch (err) {
       setError(err.message)
       console.error('Error fetching tickets:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Check for unread responses across all tickets
+  const checkForUnreadResponses = (ticketsData = null) => {
+    try {
+      const stored = localStorage.getItem('mySubmittedTickets')
+      if (!stored) return
+
+      const myTickets = JSON.parse(stored)
+      const unread = {}
+
+      myTickets.forEach(ticket => {
+        // Get the latest data from backend if available
+        const latestTicket = ticketsData ? ticketsData.find(t => t.id === ticket.id) : null
+        const ticketToCheck = latestTicket || ticket
+
+        if (ticketToCheck.admin_responses && ticketToCheck.admin_responses.length > 0) {
+          const hasUnread = ticketToCheck.admin_responses.some(r => !r.is_read)
+          if (hasUnread) {
+            unread[ticket.id] = true
+          }
+        }
+      })
+
+      setUnreadResponses(unread)
+    } catch (err) {
+      console.error('Error checking for unread responses:', err)
     }
   }
 
@@ -269,6 +321,35 @@ export default function Dashboard() {
       other: 'Other'
     }
     return labels[category] || category
+  }
+
+  // Mark all responses in a ticket as read
+  const markTicketResponsesAsRead = async (ticket) => {
+    try {
+      if (!ticket.admin_responses || ticket.admin_responses.length === 0) return
+
+      // Mark unread responses as read
+      const unreadResponses = ticket.admin_responses.filter(r => !r.is_read)
+      
+      for (const response of unreadResponses) {
+        try {
+          await fetch(`${API_BASE_URL}/tickets/${ticket.id}/responses/mark-read/${response.response_id}`, {
+            method: 'POST'
+          })
+        } catch (err) {
+          console.error('Error marking response as read:', err)
+        }
+      }
+
+      // Update unread responses state
+      setUnreadResponses(prev => {
+        const updated = { ...prev }
+        delete updated[ticket.id]
+        return updated
+      })
+    } catch (err) {
+      console.error('Error marking responses as read:', err)
+    }
   }
 
   return (
@@ -546,8 +627,14 @@ export default function Dashboard() {
                   onClick={() => {
                     setSelectedTicket(ticket)
                     setSelectedTicketSource('all')
+                    markTicketResponsesAsRead(ticket)
                   }}
                 >
+                  {unreadResponses[ticket.id] && (
+                    <div className="ticket-update-indicator" title="New admin response">
+                      📬
+                    </div>
+                  )}
                   <div className="ticket-header-compact">
                     <h3>{ticket.title}</h3>
                     <div className="ticket-badges">
@@ -593,8 +680,14 @@ export default function Dashboard() {
                     onClick={() => {
                       setSelectedTicket(ticket)
                       setSelectedTicketSource('my')
+                      markTicketResponsesAsRead(ticket)
                     }}
                   >
+                    {unreadResponses[ticket.id] && (
+                      <div className="ticket-update-indicator" title="New admin response">
+                        📬
+                      </div>
+                    )}
                     <div className="ticket-header-compact">
                       <h3>{ticket.title}</h3>
                       <div className="ticket-badges">
