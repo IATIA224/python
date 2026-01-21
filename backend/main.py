@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from datetime import datetime
 from bson.objectid import ObjectId
-from models import Ticket, TicketCreate, TicketStatus
+from models import Ticket, TicketCreate, TicketStatus, AdministratorResponse
 import os
 from dotenv import load_dotenv
 import uuid
@@ -342,6 +342,147 @@ async def delete_ticket(ticket_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting ticket: {str(e)}"
+        )
+
+
+@app.post("/tickets/{ticket_id}/responses")
+async def add_admin_response(ticket_id: str, response_data: dict):
+    """
+    Add an admin response to a ticket.
+    
+    Args:
+        ticket_id: The MongoDB ObjectId of the ticket
+        response_data: Dictionary containing admin_name and response_text
+        
+    Returns:
+        The updated ticket with the new response
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Convert string ID to ObjectId
+        try:
+            obj_id = ObjectId(ticket_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+        
+        # Validate response data
+        admin_name = response_data.get("admin_name", "").strip()
+        response_text = response_data.get("response_text", "").strip()
+        
+        if not admin_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Admin name is required"
+            )
+        
+        if not response_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Response text is required"
+            )
+        
+        # Create new response document
+        new_response = {
+            "response_id": str(uuid.uuid4()),
+            "admin_name": admin_name,
+            "response_text": response_text,
+            "created_at": datetime.utcnow(),
+            "is_read": False
+        }
+        
+        # Find the ticket and check if it exists
+        ticket = await tickets_collection.find_one({"_id": obj_id})
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Add response to ticket
+        update_data = {
+            "$push": {"admin_responses": new_response},
+            "$set": {
+                "updated_at": datetime.utcnow(),
+                "last_response_date": datetime.utcnow()
+            }
+        }
+        
+        await tickets_collection.update_one(
+            {"_id": obj_id},
+            update_data
+        )
+        
+        # Retrieve and return the updated ticket
+        updated_ticket = await tickets_collection.find_one({"_id": obj_id})
+        updated_ticket["id"] = str(updated_ticket["_id"])
+        del updated_ticket["_id"]
+        
+        return updated_ticket
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error adding response: {str(e)}"
+        )
+
+
+@app.post("/tickets/{ticket_id}/responses/mark-read/{response_id}")
+async def mark_response_as_read(ticket_id: str, response_id: str):
+    """
+    Mark an admin response as read by the user.
+    
+    Args:
+        ticket_id: The MongoDB ObjectId of the ticket
+        response_id: The response ID to mark as read
+        
+    Returns:
+        The updated ticket
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Convert string ID to ObjectId
+        try:
+            obj_id = ObjectId(ticket_id)
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+        
+        # Update the response's is_read status
+        result = await tickets_collection.update_one(
+            {"_id": obj_id, "admin_responses.response_id": response_id},
+            {"$set": {"admin_responses.$.is_read": True}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket or response not found"
+            )
+        
+        # Retrieve and return the updated ticket
+        updated_ticket = await tickets_collection.find_one({"_id": obj_id})
+        updated_ticket["id"] = str(updated_ticket["_id"])
+        del updated_ticket["_id"]
+        
+        return updated_ticket
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error marking response as read: {str(e)}"
         )
 
 

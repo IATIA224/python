@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './Dashboard.css'
+import NotificationCenter from './NotificationCenter'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -272,6 +273,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      <NotificationCenter />
       <header className="dashboard-header">
         <h1>Employee Issue Submission Portal</h1>
         <p>Report workplace issues and track their resolution</p>
@@ -636,6 +638,14 @@ export default function Dashboard() {
                 {selectedTicket.category && (
                   <span className="category-badge">{getCategoryLabel(selectedTicket.category)}</span>
                 )}
+                {selectedTicket.status && (
+                  <span 
+                    className="status-badge"
+                    style={{ backgroundColor: getStatusColor(selectedTicket.status) }}
+                  >
+                    {selectedTicket.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -670,11 +680,43 @@ export default function Dashboard() {
                   <strong>Submitted</strong>
                   <p>{formatDate(selectedTicket.created_at || selectedTicket.submittedAt)}</p>
                 </div>
+                <div className="modal-item">
+                  <strong>Status</strong>
+                  <p style={{ color: getStatusColor(selectedTicket.status), fontWeight: 'bold' }}>
+                    {selectedTicket.status ? selectedTicket.status.replace('_', ' ').toUpperCase() : 'N/A'}
+                  </p>
+                </div>
+                {selectedTicket.last_response_date && (
+                  <div className="modal-item">
+                    <strong>Last Update</strong>
+                    <p>{formatDate(selectedTicket.last_response_date)}</p>
+                  </div>
+                )}
               </div>
+
+              {selectedTicket.admin_responses && selectedTicket.admin_responses.length > 0 && (
+                <div className="modal-section admin-responses-section">
+                  <h3>Admin Responses ({selectedTicket.admin_responses.length})</h3>
+                  <div className="responses-container">
+                    {selectedTicket.admin_responses.map((response) => (
+                      <div key={response.response_id} className="response-item">
+                        <div className="response-header">
+                          <div className="response-admin">
+                            <strong className="admin-name">📧 {response.admin_name}</strong>
+                            {!response.is_read && <span className="new-badge">New</span>}
+                          </div>
+                          <span className="response-date">{formatDate(response.created_at)}</span>
+                        </div>
+                        <p className="response-text">{response.response_text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {selectedTicket.id && (
                 <div className="modal-section">
-                  <strong>ID:</strong> {selectedTicket.id.substring(0, 8).toUpperCase()}
+                  <strong>Ticket ID:</strong> {selectedTicket.id.substring(0, 8).toUpperCase()}
                 </div>
               )}
             </div>

@@ -122,15 +122,37 @@ export default function AdminDashboard() {
       setUpdating(true)
       setError(null)
       
-      // Note: You'll need to implement a reply endpoint in backend
-      // This is a placeholder showing the expected structure
-      console.log('Reply submitted for ticket:', ticketId, replyText)
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          admin_name: 'Admin',
+          response_text: replyText
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to submit reply: ${response.statusText}`)
+      }
+
+      const updatedTicket = await response.json()
       
+      // Update local state
+      setTickets(prev => 
+        prev.map(ticket => 
+          ticket.id === ticketId ? updatedTicket : ticket
+        )
+      )
+      
+      setSelectedTicket(updatedTicket)
       setSuccessMessage('Reply submitted successfully')
       setReplyText('')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
       setError(err.message)
+      console.error('Error submitting reply:', err)
     } finally {
       setUpdating(false)
     }
@@ -555,6 +577,23 @@ export default function AdminDashboard() {
                   Submit Reply
                 </button>
               </div>
+
+              {selectedTicket.admin_responses && selectedTicket.admin_responses.length > 0 && (
+                <div className="detail-section">
+                  <label>Responses History:</label>
+                  <div className="responses-list">
+                    {selectedTicket.admin_responses.map((resp) => (
+                      <div key={resp.response_id} className="response-item">
+                        <div className="response-header">
+                          <strong>{resp.admin_name}</strong>
+                          <span className="response-date">{formatDate(resp.created_at)}</span>
+                        </div>
+                        <p className="response-text">{resp.response_text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

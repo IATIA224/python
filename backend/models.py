@@ -1,8 +1,17 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 import uuid
+
+
+class AdministratorResponse(BaseModel):
+    """Model for admin responses to tickets"""
+    response_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    admin_name: str = Field(..., min_length=1, max_length=100)
+    response_text: str = Field(..., min_length=1, max_length=2000)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    is_read: bool = False
 
 
 class TicketStatus(str, Enum):
@@ -43,6 +52,8 @@ class TicketBase(BaseModel):
     location: str = Field(..., min_length=1, max_length=200)
     status: TicketStatus = TicketStatus.OPEN
     image_data: Optional[str] = None  # Base64 encoded image data
+    admin_responses: List[AdministratorResponse] = Field(default_factory=list)
+    last_response_date: Optional[datetime] = None
 
 
 class TicketCreate(TicketBase):
