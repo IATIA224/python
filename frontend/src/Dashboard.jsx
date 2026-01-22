@@ -461,36 +461,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Mode Tabs */}
-      <div className="mode-tabs">
-        <button 
-          className={`tab-btn ${viewMode === 'submit' ? 'active' : ''}`}
-          onClick={() => setViewMode('submit')}
-        >
-          Submit Issue
-        </button>
-        <button 
-          className={`tab-btn ${viewMode === 'my-reports' ? 'active' : ''}`}
-          onClick={() => {
-            setViewMode('my-reports')
-            setShowHistory(false)
-            loadMyTickets()
-          }}
-        >
-          My Reports ({myTickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
-        </button>
-        <button 
-          className={`tab-btn ${viewMode === 'my-reports' && showHistory ? 'active' : ''}`}
-          onClick={() => {
-            setViewMode('my-reports')
-            setShowHistory(true)
-            loadMyTickets()
-          }}
-        >
-          History ({myTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
-        </button>
-      </div>
-
       {/* Submit Mode */}
       {viewMode === 'submit' && (
         <div className="dashboard-content">
@@ -661,7 +631,23 @@ export default function Dashboard() {
         <section className="tickets-section">
           <div className="section-header">
             <div className="section-title-wrapper">
-              <h2>My Issues ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})</h2>
+              <div>
+                <h2>My Issues</h2>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button 
+                    className={`history-toggle-btn ${!showHistory ? 'active' : ''}`}
+                    onClick={() => setShowHistory(false)}
+                  >
+                    Active ({myTickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
+                  </button>
+                  <button 
+                    className={`history-toggle-btn ${showHistory ? 'active' : ''}`}
+                    onClick={() => setShowHistory(true)}
+                  >
+                    History ({myTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
+                  </button>
+                </div>
+              </div>
               {Object.keys(unreadResponses).length > 0 && (
                 <span className="unread-count-badge">
                   {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''}
@@ -681,19 +667,21 @@ export default function Dashboard() {
             <div className="loading">
               <p>Loading issues...</p>
             </div>
-          ) : tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length === 0 ? (
+          ) : myTickets.filter(t => showHistory ? (t.status === 'closed' || t.status === 'resolved') : (t.status !== 'closed' && t.status !== 'resolved')).length === 0 ? (
             <div className="empty-state">
-              <p>No issues yet. Submit one to get started!</p>
+              <p>{showHistory ? 'No closed/resolved issues yet.' : 'No active issues yet. Submit one to get started!'}</p>
             </div>
           ) : (
             <div className="tickets-list">
-              {tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').map(ticket => (
+              {myTickets
+                .filter(ticket => showHistory ? (ticket.status === 'closed' || ticket.status === 'resolved') : (ticket.status !== 'closed' && ticket.status !== 'resolved'))
+                .map((ticket, index) => (
                 <div 
-                  key={ticket.id} 
+                  key={index} 
                   className="ticket-card ticket-card-compact"
                   onClick={() => {
                     setSelectedTicket(ticket)
-                    setSelectedTicketSource('all')
+                    setSelectedTicketSource('my')
                     markTicketResponsesAsRead(ticket)
                   }}
                 >
@@ -719,73 +707,6 @@ export default function Dashboard() {
           )}
         </section>
       </div>
-      )}
-
-      {/* My Reports Mode */}
-      {viewMode === 'my-reports' && (
-        <div className="search-section">
-          <div className="search-container">
-            <div className="my-reports-header">
-              <div>
-                <h2>My Submitted Reports</h2>
-                <p>View all issues you've submitted from this device</p>
-              </div>
-              {Object.keys(unreadResponses).length > 0 && (
-                <div className="unread-alert-banner">
-                  <span className="alert-icon">🔔</span>
-                  <span className="alert-text">
-                    {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''} from admin
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            {myTickets.length === 0 ? (
-              <div className="empty-state">
-                <p>You haven't submitted any issues yet.</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setViewMode('submit')}
-                >
-                  Submit Your First Issue
-                </button>
-              </div>
-            ) : (
-              <div className="my-tickets-list">
-                {myTickets
-                  .filter(ticket => showHistory ? (ticket.status === 'closed' || ticket.status === 'resolved') : (ticket.status !== 'closed' && ticket.status !== 'resolved'))
-                  .map((ticket, index) => (
-                  <div 
-                    key={index} 
-                    className="ticket-card ticket-card-compact"
-                    onClick={() => {
-                      setSelectedTicket(ticket)
-                      setSelectedTicketSource('my')
-                      markTicketResponsesAsRead(ticket)
-                    }}
-                  >
-                    {unreadResponses[ticket.id] && (
-                      <div className="ticket-update-indicator" title="New admin response">
-                        📬
-                      </div>
-                    )}
-                    <div className="ticket-header-compact">
-                      <h3>{ticket.title}</h3>
-                      <div className="ticket-badges">
-                        <span 
-                          className="priority-badge"
-                          style={{ backgroundColor: getPriorityColor(ticket.priority) }}
-                        >
-                          {ticket.priority}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       )}
 
       {/* Ticket Details Modal */}

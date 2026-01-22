@@ -116,6 +116,30 @@
   transform: translateY(-2px);
 }
 
+/* History Toggle Buttons in "My Issues" Section */
+.history-toggle-btn {
+  padding: 8px 16px;
+  border: 2px solid var(--gray-300);
+  background: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--gray-600);
+}
+
+.history-toggle-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.history-toggle-btn.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
 /* ==================== ALERTS ==================== */
 .alert {
   margin: 20px;
