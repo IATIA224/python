@@ -372,6 +372,7 @@ async def add_admin_response(ticket_id: str, response_data: dict):
         # Validate response data
         admin_name = response_data.get("admin_name", "").strip()
         response_text = response_data.get("response_text", "").strip()
+        response_image_data = response_data.get("response_image_data", None)
         
         if not admin_name:
             raise HTTPException(
@@ -390,6 +391,7 @@ async def add_admin_response(ticket_id: str, response_data: dict):
             "response_id": str(uuid.uuid4()),
             "admin_name": admin_name,
             "response_text": response_text,
+            "response_image_data": response_image_data,
             "created_at": datetime.utcnow(),
             "is_read": False
         }

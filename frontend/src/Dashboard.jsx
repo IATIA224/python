@@ -830,6 +830,15 @@ export default function Dashboard() {
                           <span className="response-date">{formatDate(response.created_at)}</span>
                         </div>
                         <p className="response-text">{response.response_text}</p>
+                        {response.response_image_data && (
+                          <div className="response-image-wrapper">
+                            <img 
+                              src={response.response_image_data} 
+                              alt="Admin response attachment" 
+                              className="response-image-display"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

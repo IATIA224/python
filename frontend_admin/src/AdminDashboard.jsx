@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [updating, setUpdating] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [replyText, setReplyText] = useState('')
+  const [replyImageData, setReplyImageData] = useState(null)
 
   // Fetch all tickets from backend
   useEffect(() => {
@@ -129,7 +130,8 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           admin_name: 'Admin',
-          response_text: replyText
+          response_text: replyText,
+          response_image_data: replyImageData
         })
       })
 
@@ -149,6 +151,7 @@ export default function AdminDashboard() {
       setSelectedTicket(updatedTicket)
       setSuccessMessage('Reply submitted successfully')
       setReplyText('')
+      setReplyImageData(null)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
       setError(err.message)
@@ -156,6 +159,28 @@ export default function AdminDashboard() {
     } finally {
       setUpdating(false)
     }
+  }
+
+  // Handle reply image upload
+  const handleReplyImageUpload = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    // Limit file size to 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setReplyImageData(e.target.result)
+      setError(null)
+    }
+    reader.onerror = () => {
+      setError('Error reading file')
+    }
+    reader.readAsDataURL(file)
   }
 
   // Format date for display
@@ -569,6 +594,30 @@ export default function AdminDashboard() {
                   className="reply-textarea"
                   rows="4"
                 />
+                
+                <div className="reply-image-section">
+                  <label htmlFor="reply-image">Attach Image (optional):</label>
+                  <input
+                    type="file"
+                    id="reply-image"
+                    accept="image/*"
+                    onChange={handleReplyImageUpload}
+                    className="image-input"
+                  />
+                  {replyImageData && (
+                    <div className="reply-image-preview">
+                      <img src={replyImageData} alt="Reply attachment preview" className="reply-preview-img" />
+                      <button
+                        onClick={() => setReplyImageData(null)}
+                        className="remove-image-btn"
+                        type="button"
+                      >
+                        Remove Image
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
                 <button
                   onClick={() => handleSubmitReply(selectedTicket.id)}
                   disabled={updating || !replyText.trim()}
@@ -589,6 +638,11 @@ export default function AdminDashboard() {
                           <span className="response-date">{formatDate(resp.created_at)}</span>
                         </div>
                         <p className="response-text">{resp.response_text}</p>
+                        {resp.response_image_data && (
+                          <div className="response-image-container">
+                            <img src={resp.response_image_data} alt="Response attachment" className="response-image" />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
