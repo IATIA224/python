@@ -269,8 +269,13 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="admin-header">
         <div className="header-content">
-          <h1>Admin Dashboard</h1>
-          <p>Manage all support tickets and reports</p>
+          <div className="header-brand">
+            <img src="/logo.png" alt="Pacific Support" className="header-logo" />
+            <div className="header-text">
+              <h1>Pacific Support - Admin</h1>
+              <p>Manage all support tickets and reports</p>
+            </div>
+          </div>
         </div>
       </header>
 

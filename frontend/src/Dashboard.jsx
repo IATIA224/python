@@ -366,8 +366,13 @@ export default function Dashboard() {
     <div className="dashboard">
       <NotificationCenter />
       <header className="dashboard-header">
-        <h1>Employee Issue Submission Portal</h1>
-        <p>Report workplace issues and track their resolution</p>
+        <div className="header-brand">
+          <img src="/logo.png" alt="Pacific Support" className="header-logo" />
+          <div className="header-text">
+            <h1>Pacific Support</h1>
+            <p>Report workplace issues and track their resolution</p>
+          </div>
+        </div>
       </header>
 
       {error && (
