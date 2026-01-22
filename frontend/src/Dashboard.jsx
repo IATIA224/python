@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [selectedTicket, setSelectedTicket] = useState(null) // For modal
   const [selectedTicketSource, setSelectedTicketSource] = useState(null) // 'all' or 'my'
   const [unreadResponses, setUnreadResponses] = useState({}) // Track unread responses by ticket ID
+  const [showHistory, setShowHistory] = useState(false) // Toggle history view
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
@@ -66,11 +67,28 @@ export default function Dashboard() {
   }, [selectedTicket, selectedTicketSource])
 
   // Load submitted tickets from localStorage
-  const loadMyTickets = () => {
+  const loadMyTickets = async () => {
     try {
       const stored = localStorage.getItem('mySubmittedTickets')
       if (stored) {
-        setMyTickets(JSON.parse(stored))
+        const localTickets = JSON.parse(stored)
+        setMyTickets(localTickets)
+        
+        // Sync with backend to get latest statuses
+        try {
+          const response = await fetch(`${API_BASE_URL}/tickets`)
+          if (response.ok) {
+            const backendTickets = await response.json()
+            const updatedTickets = localTickets.map(localTicket => {
+              const backendTicket = backendTickets.find(t => t.id === localTicket.id)
+              return backendTicket ? { ...localTicket, ...backendTicket } : localTicket
+            })
+            localStorage.setItem('mySubmittedTickets', JSON.stringify(updatedTickets))
+            setMyTickets(updatedTickets)
+          }
+        } catch (err) {
+          console.error('Error syncing with backend:', err)
+        }
       }
     } catch (err) {
       console.error('Error loading tickets from storage:', err)
@@ -106,6 +124,22 @@ export default function Dashboard() {
       
       const data = await response.json()
       setTickets(data)
+      
+      // Sync backend tickets with localStorage to update statuses
+      try {
+        const stored = localStorage.getItem('mySubmittedTickets')
+        if (stored) {
+          const localTickets = JSON.parse(stored)
+          const updatedTickets = localTickets.map(localTicket => {
+            const backendTicket = data.find(t => t.id === localTicket.id)
+            return backendTicket ? { ...localTicket, ...backendTicket } : localTicket
+          })
+          localStorage.setItem('mySubmittedTickets', JSON.stringify(updatedTickets))
+          setMyTickets(updatedTickets)
+        }
+      } catch (err) {
+        console.error('Error syncing tickets with localStorage:', err)
+      }
       
       // Check for unread responses after fetching
       checkForUnreadResponses(data)
@@ -439,10 +473,21 @@ export default function Dashboard() {
           className={`tab-btn ${viewMode === 'my-reports' ? 'active' : ''}`}
           onClick={() => {
             setViewMode('my-reports')
+            setShowHistory(false)
             loadMyTickets()
           }}
         >
-          My Reports ({myTickets.length})
+          My Reports ({myTickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
+        </button>
+        <button 
+          className={`tab-btn ${viewMode === 'my-reports' && showHistory ? 'active' : ''}`}
+          onClick={() => {
+            setViewMode('my-reports')
+            setShowHistory(true)
+            loadMyTickets()
+          }}
+        >
+          History ({myTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
         </button>
       </div>
 
@@ -616,7 +661,7 @@ export default function Dashboard() {
         <section className="tickets-section">
           <div className="section-header">
             <div className="section-title-wrapper">
-              <h2>My Issues ({tickets.length})</h2>
+              <h2>My Issues ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})</h2>
               {Object.keys(unreadResponses).length > 0 && (
                 <span className="unread-count-badge">
                   {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''}
@@ -636,13 +681,13 @@ export default function Dashboard() {
             <div className="loading">
               <p>Loading issues...</p>
             </div>
-          ) : tickets.length === 0 ? (
+          ) : tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length === 0 ? (
             <div className="empty-state">
               <p>No issues yet. Submit one to get started!</p>
             </div>
           ) : (
             <div className="tickets-list">
-              {tickets.map(ticket => (
+              {tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').map(ticket => (
                 <div 
                   key={ticket.id} 
                   className="ticket-card ticket-card-compact"
@@ -707,7 +752,9 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="my-tickets-list">
-                {myTickets.map((ticket, index) => (
+                {myTickets
+                  .filter(ticket => showHistory ? (ticket.status === 'closed' || ticket.status === 'resolved') : (ticket.status !== 'closed' && ticket.status !== 'resolved'))
+                  .map((ticket, index) => (
                   <div 
                     key={index} 
                     className="ticket-card ticket-card-compact"

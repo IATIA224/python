@@ -198,13 +198,44 @@
 
 /* ==================== FILTERS SECTION ==================== */
 .filters-section {
-  padding: 24px 20px;
+  padding: 0;
   background: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 136px;
   z-index: 90;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.filters-header {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-tab-btn {
+  flex: 1;
+  padding: 16px 20px;
+  background: white;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.history-tab-btn:hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.history-tab-btn.active {
+  color: #1e3a8a;
+  border-bottom-color: #f97316;
 }
 
 .filters-container {
@@ -214,6 +245,7 @@
   align-items: center;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .search-box {

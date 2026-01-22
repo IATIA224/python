@@ -558,8 +558,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
   border-bottom: 3px solid var(--accent-color);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -580,6 +580,7 @@
   gap: 15px;
   flex: 1;
   overflow-y: auto;
+  padding-top: 25px;
 }
 
 .ticket-card {

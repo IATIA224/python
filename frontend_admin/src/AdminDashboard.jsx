@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [replyText, setReplyText] = useState('')
   const [replyImageData, setReplyImageData] = useState(null)
+  const [showHistory, setShowHistory] = useState(false) // Toggle history view
 
   // Fetch all tickets from backend
   useEffect(() => {
@@ -245,7 +246,13 @@ export default function AdminDashboard() {
 
   // Filter tickets based on status, priority, and search
   const filteredTickets = tickets.filter(ticket => {
-    const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus
+    // Show resolved and closed tickets in history, exclude them from main view
+    const isHistoryTicket = ticket.status === 'closed' || ticket.status === 'resolved'
+    const isOpenTicket = ticket.status !== 'closed' && ticket.status !== 'resolved'
+    
+    // If showing history, show all resolved/closed regardless of filterStatus
+    // If not showing history, apply status filter normally
+    const matchesStatus = showHistory ? isHistoryTicket : (isOpenTicket && (filterStatus === 'all' || ticket.status === filterStatus))
     const matchesPriority = filterPriority === 'all' || ticket.priority === filterPriority
     const matchesSearch = searchQuery === '' || 
       ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -336,6 +343,21 @@ export default function AdminDashboard() {
 
       {/* Filters and Search */}
       <section className="filters-section">
+        <div className="filters-header">
+          <button 
+            className={`history-tab-btn ${!showHistory ? 'active' : ''}`}
+            onClick={() => setShowHistory(false)}
+          >
+            Open Tickets ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
+          </button>
+          <button 
+            className={`history-tab-btn ${showHistory ? 'active' : ''}`}
+            onClick={() => setShowHistory(true)}
+          >
+            Closed/History ({tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
+          </button>
+        </div>
+        
         <div className="filters-container">
           <div className="search-box">
             <input
