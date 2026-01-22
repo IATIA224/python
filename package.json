@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Full-stack ticketing system using FARM stack",
   "scripts": {
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run frontend:admin\"",
+    "dev:user": "concurrently \"npm run backend\" \"npm run frontend\"",
     "dev:admin": "concurrently \"npm run backend\" \"npm run frontend:admin\"",
     "backend": "cd backend && python -m uvicorn main:app --reload",
     "frontend": "cd frontend && npm run dev",
