@@ -111,6 +111,27 @@ export default function Dashboard() {
     }
   }
 
+  // Clear history (closed/resolved tickets) from localStorage
+  const clearUserHistory = () => {
+    if (window.confirm('Are you sure you want to clear all closed/resolved issues? This cannot be undone.')) {
+      try {
+        const stored = localStorage.getItem('mySubmittedTickets')
+        if (stored) {
+          const tickets = JSON.parse(stored)
+          const activeTickets = tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved')
+          localStorage.setItem('mySubmittedTickets', JSON.stringify(activeTickets))
+          setMyTickets(activeTickets)
+          setSuccessMessage('History cleared successfully')
+          setTimeout(() => setSuccessMessage(''), 3000)
+          setShowHistory(false)
+        }
+      } catch (err) {
+        setError('Error clearing history: ' + err.message)
+        console.error('Error clearing history:', err)
+      }
+    }
+  }
+
   // Fetch all tickets from backend
   const fetchTickets = async () => {
     try {
@@ -661,6 +682,15 @@ export default function Dashboard() {
             >
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
+            {showHistory && myTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length > 0 && (
+              <button 
+                className="btn btn-danger"
+                onClick={clearUserHistory}
+                title="Clear all closed/resolved issues from history"
+              >
+                Clear History
+              </button>
+            )}
           </div>
 
           {loading ? (

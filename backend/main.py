@@ -488,6 +488,35 @@ async def mark_response_as_read(ticket_id: str, response_id: str):
         )
 
 
+@app.delete("/admin/clear-history", status_code=status.HTTP_200_OK)
+async def clear_admin_history():
+    """
+    Delete all closed and resolved tickets from the database (admin history cleanup).
+    
+    Returns:
+        Dictionary with count of deleted tickets
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Delete all tickets with status 'closed' or 'resolved'
+        result = await tickets_collection.delete_many({
+            "status": {"$in": ["closed", "resolved"]}
+        })
+        
+        return {
+            "message": f"Successfully deleted {result.deleted_count} closed/resolved tickets from history",
+            "deleted_count": result.deleted_count
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error clearing history: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

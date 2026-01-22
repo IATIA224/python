@@ -17,6 +17,9 @@ export default function AdminDashboard() {
   const [replyText, setReplyText] = useState('')
   const [replyImageData, setReplyImageData] = useState(null)
   const [showHistory, setShowHistory] = useState(false) // Toggle history view
+  const [deleteHistoryModal, setDeleteHistoryModal] = useState(null) // null, 'confirm1', 'confirm2', 'confirm3'
+  const [deleteHistoryConfirmText, setDeleteHistoryConfirmText] = useState('')
+  const [closedTicketCount, setClosedTicketCount] = useState(0)
 
   // Fetch all tickets from backend
   useEffect(() => {
@@ -114,6 +117,68 @@ export default function AdminDashboard() {
     } finally {
       setUpdating(false)
     }
+  }
+
+  // Delete ALL history with multiple confirmations
+  const clearAdminHistory = async () => {
+    const closedCount = tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length
+    setClosedTicketCount(closedCount)
+    setDeleteHistoryModal('confirm1')
+    setDeleteHistoryConfirmText('')
+  }
+
+  const handleDeleteHistoryConfirm1 = () => {
+    setDeleteHistoryModal('confirm2')
+  }
+
+  const handleDeleteHistoryConfirm2 = () => {
+    setDeleteHistoryModal('confirm3')
+    setDeleteHistoryConfirmText('')
+  }
+
+  const handleDeleteHistoryConfirm3 = async () => {
+    if (deleteHistoryConfirmText !== 'DELETE ALL HISTORY') {
+      setError('Text does not match. Please try again.')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    try {
+      setUpdating(true)
+      setError(null)
+      
+      const response = await fetch(`${API_BASE_URL}/admin/clear-history`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete all history: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      
+      // Refresh tickets list to remove deleted items
+      await fetchTickets()
+      
+      setSuccessMessage(`✓ ${data.message}`)
+      setTimeout(() => setSuccessMessage(''), 5000)
+      setShowHistory(false)
+      setDeleteHistoryModal(null)
+      setDeleteHistoryConfirmText('')
+    } catch (err) {
+      setError(err.message)
+      console.error('Error deleting all history:', err)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleDeleteHistoryCancel = () => {
+    setDeleteHistoryModal(null)
+    setDeleteHistoryConfirmText('')
   }
 
   // Submit reply/note (simulated - extend backend for actual implementation)
@@ -402,6 +467,16 @@ export default function AdminDashboard() {
           <button onClick={fetchTickets} className="refresh-btn" disabled={loading}>
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
+          {showHistory && (
+            <button 
+              onClick={clearAdminHistory} 
+              className="delete-all-history-btn" 
+              disabled={updating || tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0}
+              title={tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0 ? 'No history to delete' : 'Permanently delete all closed/resolved tickets'}
+            >
+              {updating ? 'Deleting...' : '🗑️ Delete History'}
+            </button>
+          )}
         </div>
       </section>
 
@@ -707,6 +782,106 @@ export default function AdminDashboard() {
                   {updating ? 'Deleting...' : 'Delete Ticket'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete History Confirmation Modals */}
+      {deleteHistoryModal === 'confirm1' && (
+        <div className="modal-overlay" onClick={handleDeleteHistoryCancel}>
+          <div className="delete-history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header delete-danger">
+              <h2>⚠️ WARNING</h2>
+            </div>
+            <div className="modal-body">
+              <p className="warning-text">
+                You are about to <strong>PERMANENTLY DELETE {closedTicketCount} closed/resolved tickets</strong> from the database.
+              </p>
+              <p className="warning-text critical">
+                This action <strong>CANNOT BE UNDONE!</strong>
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={handleDeleteHistoryCancel} className="btn-cancel">
+                Cancel
+              </button>
+              <button onClick={handleDeleteHistoryConfirm1} className="btn-continue">
+                Continue to Step 2
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteHistoryModal === 'confirm2' && (
+        <div className="modal-overlay" onClick={handleDeleteHistoryCancel}>
+          <div className="delete-history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header delete-critical">
+              <h2>🚨 FINAL WARNING</h2>
+            </div>
+            <div className="modal-body">
+              <p className="warning-text critical">
+                <strong>This will PERMANENTLY DELETE {closedTicketCount} tickets from the database.</strong>
+              </p>
+              <p className="warning-text critical">
+                <strong>Are you absolutely certain you want to proceed?</strong>
+              </p>
+              <div className="warning-box">
+                <p>• All data will be lost</p>
+                <p>• This cannot be reversed</p>
+                <p>• There is no backup recovery</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={handleDeleteHistoryCancel} className="btn-cancel">
+                Cancel & Go Back
+              </button>
+              <button onClick={handleDeleteHistoryConfirm2} className="btn-continue-final">
+                I Understand - Continue to Step 3
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteHistoryModal === 'confirm3' && (
+        <div className="modal-overlay" onClick={handleDeleteHistoryCancel}>
+          <div className="delete-history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header delete-critical">
+              <h2>🔴 LAST CHANCE TO CANCEL</h2>
+            </div>
+            <div className="modal-body">
+              <p className="warning-text critical">
+                <strong>To permanently delete all {closedTicketCount} closed/resolved tickets, type the following text:</strong>
+              </p>
+              <div className="required-text-box">
+                DELETE ALL HISTORY
+              </div>
+              <p className="instruction-text">Type it exactly (case-sensitive):</p>
+              <input
+                type="text"
+                value={deleteHistoryConfirmText}
+                onChange={(e) => setDeleteHistoryConfirmText(e.target.value)}
+                placeholder="Type DELETE ALL HISTORY"
+                className="confirmation-input"
+                autoFocus
+              />
+              <p className="instruction-text small">
+                This is your final opportunity to prevent permanent deletion.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={handleDeleteHistoryCancel} className="btn-cancel">
+                Cancel & Keep Data
+              </button>
+              <button 
+                onClick={handleDeleteHistoryConfirm3} 
+                disabled={deleteHistoryConfirmText !== 'DELETE ALL HISTORY' || updating}
+                className={deleteHistoryConfirmText === 'DELETE ALL HISTORY' ? 'btn-delete-final' : 'btn-delete-final-disabled'}
+              >
+                {updating ? 'Deleting...' : 'PERMANENTLY DELETE ALL'}
+              </button>
             </div>
           </div>
         </div>

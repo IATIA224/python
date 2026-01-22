@@ -332,6 +332,32 @@
   cursor: not-allowed;
 }
 
+.delete-all-history-btn {
+  padding: 10px 24px;
+  background: #7f1d1d;
+  color: white;
+  border: 2px solid #991b1b;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(127, 29, 29, 0.3);
+  margin-left: 10px;
+}
+
+.delete-all-history-btn:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+}
+
+.delete-all-history-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ==================== TICKETS SECTION ==================== */
 .tickets-section {
   padding: 30px 20px;
@@ -1045,5 +1071,223 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+/* ==================== DELETE HISTORY MODALS ==================== */
+.delete-history-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+.delete-history-modal .modal-header {
+  padding: 24px 24px 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.delete-history-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modal-header.delete-danger {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+}
+
+.modal-header.delete-danger h2 {
+  color: #991b1b;
+}
+
+.modal-header.delete-critical {
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+  color: white;
+  border-bottom: none;
+}
+
+.modal-header.delete-critical h2 {
+  color: white;
+}
+
+.delete-history-modal .modal-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.warning-text {
+  margin: 12px 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.warning-text.critical {
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.warning-box {
+  background: #fee2e2;
+  border-left: 4px solid #dc2626;
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.warning-box p {
+  margin: 8px 0;
+  color: #7f1d1d;
+  font-weight: 500;
+}
+
+.required-text-box {
+  background: #1f2937;
+  color: #10b981;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 16px 0;
+  letter-spacing: 0.05em;
+  border: 2px solid #10b981;
+}
+
+.instruction-text {
+  color: #374151;
+  font-weight: 600;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.instruction-text.small {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.confirmation-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.confirmation-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.delete-history-modal .modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  gap: 12px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 12px 20px;
+  background: white;
+  color: #374151;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  border-color: #1f2937;
+  background: #f3f4f6;
+}
+
+.btn-continue {
+  flex: 1;
+  padding: 12px 20px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-continue:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-continue-final {
+  flex: 1;
+  padding: 12px 20px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-continue-final:hover {
+  background: #991b1b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.btn-delete-final {
+  flex: 1;
+  padding: 12px 20px;
+  background: #7f1d1d;
+  color: white;
+  border: 2px solid #991b1b;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.btn-delete-final:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+}
+
+.btn-delete-final:disabled,
+.btn-delete-final-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #9ca3af;
+  border-color: #d1d5db;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
