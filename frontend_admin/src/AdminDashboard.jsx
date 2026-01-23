@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import './AdminDashboard.css'
+import { io } from 'socket.io-client'
 
 const API_BASE_URL = 'http://localhost:8000'
+let socket = null
 
 export default function AdminDashboard() {
   const [tickets, setTickets] = useState([])
@@ -20,11 +22,88 @@ export default function AdminDashboard() {
   const [deleteHistoryModal, setDeleteHistoryModal] = useState(null) // null, 'confirm1', 'confirm2', 'confirm3'
   const [deleteHistoryConfirmText, setDeleteHistoryConfirmText] = useState('')
   const [closedTicketCount, setClosedTicketCount] = useState(0)
+  const [newNotification, setNewNotification] = useState(null) // Real-time notification
 
-  // Fetch all tickets from backend
+  // Fetch all tickets from backend and setup WebSocket connection
   useEffect(() => {
     fetchTickets()
+    setupWebSocket()
+    
+    return () => {
+      if (socket) {
+        socket.disconnect()
+      }
+    }
   }, [])
+
+  const setupWebSocket = () => {
+    try {
+      socket = io(API_BASE_URL, {
+        namespace: '/admin',
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+        transports: ['websocket', 'polling']
+      })
+
+      socket.on('connect', () => {
+        console.log('Connected to real-time notifications')
+      })
+
+      socket.on('new_ticket', (data) => {
+        console.log('New ticket received:', data)
+        setNewNotification({
+          type: 'new_ticket',
+          message: data.message,
+          ticket: data.ticket,
+          timestamp: data.timestamp
+        })
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => setNewNotification(null), 5000)
+        // Add the new ticket to the top of the list
+        setTickets(prev => [data.ticket, ...prev])
+      })
+
+      socket.on('ticket_updated', (data) => {
+        console.log('Ticket updated:', data)
+        setNewNotification({
+          type: 'ticket_updated',
+          message: `Ticket ${data.ticket_id} has been updated`,
+          update_type: data.update_type,
+          timestamp: data.timestamp
+        })
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => setNewNotification(null), 5000)
+        // Update the ticket in the list
+        setTickets(prev =>
+          prev.map(ticket => ticket.id === data.ticket_id ? data.ticket : ticket)
+        )
+      })
+
+      socket.on('new_response', (data) => {
+        console.log('New response received:', data)
+        setNewNotification({
+          type: 'new_response',
+          message: `${data.admin_name} responded to ticket ${data.ticket_id}`,
+          ticket_id: data.ticket_id,
+          timestamp: data.timestamp
+        })
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => setNewNotification(null), 5000)
+        // Update the ticket in the list
+        setTickets(prev =>
+          prev.map(ticket => ticket.id === data.ticket_id ? data.ticket : ticket)
+        )
+      })
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from real-time notifications')
+      })
+    } catch (err) {
+      console.error('Error setting up WebSocket:', err)
+    }
+  }
 
   const fetchTickets = async () => {
     try {
@@ -338,6 +417,27 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
+      {/* Real-time Notification */}
+      {newNotification && (
+        <div className={`notification notification-${newNotification.type}`}>
+          <div className="notification-content">
+            <span className="notification-icon">
+              {newNotification.type === 'new_ticket' ? '📋' : newNotification.type === 'new_response' ? '💬' : '🔄'}
+            </span>
+            <div className="notification-text">
+              <p>{newNotification.message}</p>
+              <small>{new Date(newNotification.timestamp).toLocaleTimeString()}</small>
+            </div>
+          </div>
+          <button 
+            className="notification-close"
+            onClick={() => setNewNotification(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="admin-header">
         <div className="header-content">

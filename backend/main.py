@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 import uuid
 from email_service import send_email_async, generate_ticket_update_email
+from websocket_manager import get_socketio_app, broadcast_new_ticket, broadcast_ticket_update, notify_new_response
 
 # Load environment variables from .env file
 load_dotenv()
@@ -148,6 +149,12 @@ async def create_ticket(ticket: TicketCreate):
         created_ticket = await tickets_collection.find_one({"_id": result.inserted_id})
         created_ticket["id"] = str(created_ticket["_id"])
         del created_ticket["_id"]
+        
+        # Broadcast new ticket to all connected admins
+        try:
+            await broadcast_new_ticket(created_ticket)
+        except Exception as e:
+            print(f"Warning: Failed to broadcast new ticket: {str(e)}")
         
         return Ticket(**created_ticket)
     except Exception as e:
@@ -466,6 +473,12 @@ async def add_admin_response(ticket_id: str, response_data: dict):
                 # Log the error but don't fail the request
                 print(f"Warning: Failed to send email notification: {str(e)}")
         
+        # Broadcast ticket update and new response to connected clients
+        try:
+            await notify_new_response(str(obj_id), updated_ticket, admin_name, response_text)
+        except Exception as e:
+            print(f"Warning: Failed to broadcast response notification: {str(e)}")
+        
         return updated_ticket
     except HTTPException:
         raise
@@ -558,6 +571,10 @@ async def clear_admin_history():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error clearing history: {str(e)}"
         )
+
+
+# Wrap the FastAPI app with SocketIO for real-time notifications
+app = get_socketio_app(app)
 
 
 if __name__ == "__main__":
