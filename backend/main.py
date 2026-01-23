@@ -7,6 +7,7 @@ from models import Ticket, TicketCreate, TicketStatus, AdministratorResponse
 import os
 from dotenv import load_dotenv
 import uuid
+from email_service import send_email_async, generate_ticket_update_email
 
 # Load environment variables from .env file
 load_dotenv()
@@ -270,6 +271,14 @@ async def update_ticket(ticket_id: str, status_update: dict):
                     detail=f"Invalid status value. Must be one of: {', '.join([s.value for s in TicketStatus])}"
                 )
         
+        # Get the ticket before updating to access reporter email
+        ticket_before = await tickets_collection.find_one({"_id": obj_id})
+        if not ticket_before:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
         # Update the ticket
         update_data = {"updated_at": datetime.utcnow()}
         if new_status:
@@ -290,6 +299,22 @@ async def update_ticket(ticket_id: str, status_update: dict):
         updated_ticket = await tickets_collection.find_one({"_id": obj_id})
         updated_ticket["id"] = str(updated_ticket["_id"])
         del updated_ticket["_id"]
+        
+        # Send email notification asynchronously
+        if new_status and ticket_before.get("reporter_email"):
+            try:
+                email_subject = f"Ticket Update: {ticket_before.get('title', 'Your Support Ticket')}"
+                email_html = generate_ticket_update_email(
+                    reporter_name=ticket_before.get("reporter_name", "User"),
+                    ticket_id=str(obj_id),
+                    ticket_title=ticket_before.get("title", "N/A"),
+                    new_status=new_status
+                )
+                # Send email asynchronously without blocking the response
+                await send_email_async(ticket_before.get("reporter_email"), email_subject, email_html)
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Warning: Failed to send email notification: {str(e)}")
         
         return Ticket(**updated_ticket)
     except HTTPException:
@@ -422,6 +447,24 @@ async def add_admin_response(ticket_id: str, response_data: dict):
         updated_ticket = await tickets_collection.find_one({"_id": obj_id})
         updated_ticket["id"] = str(updated_ticket["_id"])
         del updated_ticket["_id"]
+        
+        # Send email notification asynchronously to ticket reporter
+        if ticket.get("reporter_email"):
+            try:
+                email_subject = f"New Response on Ticket: {ticket.get('title', 'Your Support Ticket')}"
+                email_html = generate_ticket_update_email(
+                    reporter_name=ticket.get("reporter_name", "User"),
+                    ticket_id=str(obj_id),
+                    ticket_title=ticket.get("title", "N/A"),
+                    new_status=ticket.get("status", "open"),
+                    admin_name=admin_name,
+                    response_text=response_text
+                )
+                # Send email asynchronously without blocking the response
+                await send_email_async(ticket.get("reporter_email"), email_subject, email_html)
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Warning: Failed to send email notification: {str(e)}")
         
         return updated_ticket
     except HTTPException:
