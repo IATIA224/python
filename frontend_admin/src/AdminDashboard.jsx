@@ -5,7 +5,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { debounce, getCachedRequest } from './utils'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 let socket = null
 
 // Helper function to get date range start (30 days ago)

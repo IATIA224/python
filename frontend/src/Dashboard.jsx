@@ -4,7 +4,7 @@ import NotificationCenter from './NotificationCenter'
 import { io } from 'socket.io-client'
 import { debounce, getCachedRequest } from './utils'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 let socket = null
 
 export default function Dashboard() {
