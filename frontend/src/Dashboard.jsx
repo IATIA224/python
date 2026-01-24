@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './Dashboard.css'
 import NotificationCenter from './NotificationCenter'
 import { io } from 'socket.io-client'
+import { debounce, getCachedRequest } from './utils'
 
 const API_BASE_URL = 'http://localhost:8000'
 let socket = null
@@ -449,18 +450,10 @@ export default function Dashboard() {
     }
   }
 
-  // Submit a rating for a ticket
+  // Submit a rating for a ticket (with optimistic update)
   const submitRating = async (ticketId, rating) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/rate?rating=${rating}`, {
-        method: 'POST'
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to submit rating')
-      }
-
-      // Update selected ticket with new rating
+      // Optimistic update - update UI immediately
       setSelectedTicket(prev => ({
         ...prev,
         user_feedback: {
@@ -469,24 +462,60 @@ export default function Dashboard() {
         }
       }))
 
-      // Also update in myTickets
       setMyTickets(prev => prev.map(t => 
         t.id === ticketId 
           ? { ...t, user_feedback: { ...t.user_feedback, rating: rating } }
           : t
       ))
 
+      // Send request in background
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/rate?rating=${rating}`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit rating')
+      }
+
       setSuccessMessage(`Rated ${rating} star${rating !== 1 ? 's' : ''}!`)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
+      // Revert optimistic update on error
+      const currentTicket = myTickets.find(t => t.id === ticketId)
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          rating: currentTicket?.user_feedback?.rating || null
+        }
+      }))
       setError('Error submitting rating: ' + err.message)
       console.error('Error submitting rating:', err)
     }
   }
 
-  // Submit a like for a ticket
+  // Submit a like for a ticket (with optimistic update)
   const submitLike = async (ticketId) => {
     try {
+      // Optimistic update - calculate expected like count
+      const currentLikes = selectedTicket?.user_feedback?.likes || 0
+      const newLikes = currentLikes + 1
+
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          likes: newLikes
+        }
+      }))
+
+      setMyTickets(prev => prev.map(t => 
+        t.id === ticketId 
+          ? { ...t, user_feedback: { ...t.user_feedback, likes: newLikes } }
+          : t
+      ))
+
+      // Send request in background
       const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/like`, {
         method: 'POST'
       })
@@ -496,8 +525,8 @@ export default function Dashboard() {
       }
 
       const data = await response.json()
-
-      // Update selected ticket with new like count
+      
+      // Update with actual server value
       setSelectedTicket(prev => ({
         ...prev,
         user_feedback: {
@@ -506,24 +535,45 @@ export default function Dashboard() {
         }
       }))
 
-      // Also update in myTickets
-      setMyTickets(prev => prev.map(t => 
-        t.id === ticketId 
-          ? { ...t, user_feedback: { ...t.user_feedback, likes: data.likes } }
-          : t
-      ))
-
       setSuccessMessage('Thank you for the feedback!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
+      // Revert optimistic update on error
+      const currentTicket = myTickets.find(t => t.id === ticketId)
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          likes: currentTicket?.user_feedback?.likes || 0
+        }
+      }))
       setError('Error liking ticket: ' + err.message)
       console.error('Error liking ticket:', err)
     }
   }
 
-  // Submit a dislike for a ticket
+  // Submit a dislike for a ticket (with optimistic update)
   const submitDislike = async (ticketId) => {
     try {
+      // Optimistic update - calculate expected dislike count
+      const currentDislikes = selectedTicket?.user_feedback?.dislikes || 0
+      const newDislikes = currentDislikes + 1
+
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          dislikes: newDislikes
+        }
+      }))
+
+      setMyTickets(prev => prev.map(t => 
+        t.id === ticketId 
+          ? { ...t, user_feedback: { ...t.user_feedback, dislikes: newDislikes } }
+          : t
+      ))
+
+      // Send request in background
       const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/dislike`, {
         method: 'POST'
       })
@@ -534,7 +584,7 @@ export default function Dashboard() {
 
       const data = await response.json()
 
-      // Update selected ticket with new dislike count
+      // Update with actual server value
       setSelectedTicket(prev => ({
         ...prev,
         user_feedback: {
@@ -543,16 +593,18 @@ export default function Dashboard() {
         }
       }))
 
-      // Also update in myTickets
-      setMyTickets(prev => prev.map(t => 
-        t.id === ticketId 
-          ? { ...t, user_feedback: { ...t.user_feedback, dislikes: data.dislikes } }
-          : t
-      ))
-
       setSuccessMessage('Thank you for the feedback!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
+      // Revert optimistic update on error
+      const currentTicket = myTickets.find(t => t.id === ticketId)
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          dislikes: currentTicket?.user_feedback?.dislikes || 0
+        }
+      }))
       setError('Error disliking ticket: ' + err.message)
       console.error('Error disliking ticket:', err)
     }

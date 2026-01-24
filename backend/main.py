@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 from models import Ticket, TicketCreate, TicketStatus, AdministratorResponse
 import os
@@ -23,7 +23,7 @@ app = FastAPI(
 # Add CORS middleware to allow React frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],  # User, production, and admin URLs
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:3001"],  # User, admin, production, and alternate dev URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,6 +45,26 @@ async def startup_db():
     global db
     client = AsyncIOMotorClient(MONGODB_URL)
     db = client[DATABASE_NAME]
+    
+    # Create database indexes for performance optimization
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        # Index for sorting and filtering by created_at (most common query)
+        await tickets_collection.create_index("created_at")
+        # Index for status filtering (frequently used in queries)
+        await tickets_collection.create_index("status")
+        # Index for priority filtering
+        await tickets_collection.create_index("priority")
+        # Index for access token lookup (single ticket retrieval) - sparse to handle null values
+        await tickets_collection.create_index("access_token", unique=True, sparse=True)
+        # Compound index for status + created_at (common filter + sort combination)
+        await tickets_collection.create_index([("status", 1), ("created_at", -1)])
+        # Index for category filtering
+        await tickets_collection.create_index("category")
+        print("✓ Database indexes created successfully")
+    except Exception as e:
+        print(f"Warning: Database indexes may already exist: {str(e)}")
+    
     print(f"Connected to MongoDB: {DATABASE_NAME}")
 
 
@@ -66,6 +86,7 @@ async def root():
 async def get_tickets():
     """
     Retrieve all tickets from the database.
+    Optimized with indexes for fast queries.
     
     Returns:
         List of all tickets sorted by creation date (newest first)
@@ -76,6 +97,7 @@ async def get_tickets():
         
         # Find all tickets and sort by created_at in descending order
         cursor = tickets_collection.find().sort("created_at", -1)
+        
         async for ticket in cursor:
             # Convert MongoDB _id ObjectId to string and rename to id
             ticket["id"] = str(ticket["_id"])
@@ -717,7 +739,7 @@ async def add_comment(ticket_id: str, user_name: str, comment_text: str):
 @app.post("/tickets/{ticket_id}/feedback/like")
 async def like_ticket(ticket_id: str):
     """
-    Like a completed ticket.
+    Like a completed ticket using atomic increment operation.
     
     Args:
         ticket_id: The ticket ID
@@ -728,43 +750,38 @@ async def like_ticket(ticket_id: str):
     try:
         tickets_collection = db[TICKETS_COLLECTION]
         
-        # Find ticket
-        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        # Use atomic increment instead of fetching and updating
+        result = await tickets_collection.find_one_and_update(
+            {"_id": ObjectId(ticket_id)},
+            {
+                "$inc": {"user_feedback.likes": 1},
+                "$set": {"user_feedback.updated_at": datetime.utcnow().isoformat()},
+                "$setOnInsert": {
+                    "user_feedback": {
+                        "rating": None,
+                        "likes": 1,
+                        "dislikes": 0,
+                        "comments": [],
+                        "created_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.utcnow().isoformat()
+                    }
+                }
+            },
+            upsert=True,
+            return_document=True
+        )
         
-        if not ticket:
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ticket not found"
             )
         
-        # Initialize or update user_feedback
-        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
-            ticket["user_feedback"] = {
-                "rating": None,
-                "likes": 1,
-                "dislikes": 0,
-                "comments": [],
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat()
-            }
-        else:
-            ticket["user_feedback"]["likes"] += 1
-            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
-        
-        result = await tickets_collection.update_one(
-            {"_id": ObjectId(ticket_id)},
-            {"$set": {"user_feedback": ticket["user_feedback"]}}
-        )
-        
-        if result.modified_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to like ticket"
-            )
+        likes = result.get("user_feedback", {}).get("likes", 0)
         
         return {
             "message": "Liked successfully",
-            "likes": ticket["user_feedback"]["likes"]
+            "likes": likes
         }
     
     except ValueError:
@@ -784,7 +801,7 @@ async def like_ticket(ticket_id: str):
 @app.post("/tickets/{ticket_id}/feedback/dislike")
 async def dislike_ticket(ticket_id: str):
     """
-    Dislike a completed ticket.
+    Dislike a completed ticket using atomic increment operation.
     
     Args:
         ticket_id: The ticket ID
@@ -795,43 +812,38 @@ async def dislike_ticket(ticket_id: str):
     try:
         tickets_collection = db[TICKETS_COLLECTION]
         
-        # Find ticket
-        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        # Use atomic increment instead of fetching and updating
+        result = await tickets_collection.find_one_and_update(
+            {"_id": ObjectId(ticket_id)},
+            {
+                "$inc": {"user_feedback.dislikes": 1},
+                "$set": {"user_feedback.updated_at": datetime.utcnow().isoformat()},
+                "$setOnInsert": {
+                    "user_feedback": {
+                        "rating": None,
+                        "likes": 0,
+                        "dislikes": 1,
+                        "comments": [],
+                        "created_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.utcnow().isoformat()
+                    }
+                }
+            },
+            upsert=True,
+            return_document=True
+        )
         
-        if not ticket:
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ticket not found"
             )
         
-        # Initialize or update user_feedback
-        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
-            ticket["user_feedback"] = {
-                "rating": None,
-                "likes": 0,
-                "dislikes": 1,
-                "comments": [],
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat()
-            }
-        else:
-            ticket["user_feedback"]["dislikes"] += 1
-            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
-        
-        result = await tickets_collection.update_one(
-            {"_id": ObjectId(ticket_id)},
-            {"$set": {"user_feedback": ticket["user_feedback"]}}
-        )
-        
-        if result.modified_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to dislike ticket"
-            )
+        dislikes = result.get("user_feedback", {}).get("dislikes", 0)
         
         return {
             "message": "Disliked successfully",
-            "dislikes": ticket["user_feedback"]["dislikes"]
+            "dislikes": dislikes
         }
     
     except ValueError:

@@ -3,6 +3,7 @@ import './AdminDashboard.css'
 import { io } from 'socket.io-client'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { debounce, getCachedRequest } from './utils'
 
 const API_BASE_URL = 'http://localhost:8000'
 let socket = null
@@ -136,12 +137,26 @@ export default function AdminDashboard() {
     }
   }
 
-  // Update ticket status
+  // Update ticket status with optimistic update
   const handleUpdateStatus = async (ticketId, newStatus) => {
     try {
-      setUpdating(true)
       setError(null)
       
+      // Optimistic update
+      const updatedTicket = {
+        ...selectedTicket,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      }
+
+      setSelectedTicket(updatedTicket)
+      setTickets(prev => 
+        prev.map(ticket => 
+          ticket.id === ticketId ? updatedTicket : ticket
+        )
+      )
+
+      // Send request in background
       const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: {
@@ -154,26 +169,26 @@ export default function AdminDashboard() {
         throw new Error(`Failed to update ticket: ${response.statusText}`)
       }
 
-      const updatedTicket = await response.json()
+      const serverTicket = await response.json()
       
-      // Update local state
+      // Update with server response
       setTickets(prev => 
         prev.map(ticket => 
-          ticket.id === ticketId ? updatedTicket : ticket
+          ticket.id === ticketId ? serverTicket : ticket
         )
       )
       
+      setSelectedTicket(serverTicket)
       setSuccessMessage(`Ticket status updated to "${newStatus}"`)
       setTimeout(() => setSuccessMessage(''), 3000)
-      
-      if (selectedTicket?.id === ticketId) {
-        setSelectedTicket(updatedTicket)
-      }
     } catch (err) {
+      // Revert optimistic update on error
+      const originalTicket = tickets.find(t => t.id === ticketId)
+      if (originalTicket) {
+        setSelectedTicket(originalTicket)
+      }
       setError(err.message)
       console.error('Error updating ticket:', err)
-    } finally {
-      setUpdating(false)
     }
   }
 
@@ -271,14 +286,40 @@ export default function AdminDashboard() {
     setDeleteHistoryConfirmText('')
   }
 
-  // Submit reply/note (simulated - extend backend for actual implementation)
+  // Submit reply/note with optimistic update
   const handleSubmitReply = async (ticketId) => {
     if (!replyText.trim()) return
 
     try {
-      setUpdating(true)
-      setError(null)
-      
+      // Optimistic update - create response object immediately
+      const newResponse = {
+        response_id: 'temp-' + Date.now(),
+        admin_name: 'Admin',
+        response_text: replyText,
+        response_image_data: replyImageData,
+        created_at: new Date().toISOString(),
+        is_read: false
+      }
+
+      // Update UI immediately
+      const optimisticTicket = {
+        ...selectedTicket,
+        admin_responses: [...(selectedTicket.admin_responses || []), newResponse]
+      }
+
+      setSelectedTicket(optimisticTicket)
+      setTickets(prev =>
+        prev.map(ticket =>
+          ticket.id === ticketId ? optimisticTicket : ticket
+        )
+      )
+
+      const replyTextTemp = replyText
+      const replyImageDataTemp = replyImageData
+      setReplyText('')
+      setReplyImageData(null)
+
+      // Send request in background
       const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/responses`, {
         method: 'POST',
         headers: {
@@ -286,8 +327,8 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           admin_name: 'Admin',
-          response_text: replyText,
-          response_image_data: replyImageData
+          response_text: replyTextTemp,
+          response_image_data: replyImageDataTemp
         })
       })
 
@@ -297,7 +338,7 @@ export default function AdminDashboard() {
 
       const updatedTicket = await response.json()
       
-      // Update local state
+      // Update with actual server response
       setTickets(prev => 
         prev.map(ticket => 
           ticket.id === ticketId ? updatedTicket : ticket
@@ -306,14 +347,15 @@ export default function AdminDashboard() {
       
       setSelectedTicket(updatedTicket)
       setSuccessMessage('Reply submitted successfully')
-      setReplyText('')
-      setReplyImageData(null)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
+      // Revert optimistic update on error
+      const originalTicket = tickets.find(t => t.id === ticketId)
+      if (originalTicket) {
+        setSelectedTicket(originalTicket)
+      }
       setError(err.message)
       console.error('Error submitting reply:', err)
-    } finally {
-      setUpdating(false)
     }
   }
 
