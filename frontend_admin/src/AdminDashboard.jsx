@@ -447,6 +447,73 @@ export default function AdminDashboard() {
               <p>Manage all support tickets and reports</p>
             </div>
           </div>
+          
+          <div className="header-controls">
+            <div className="search-box-header">
+              <input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input-header"
+              />
+            </div>
+            
+            <div className="filters-group-header">
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="filter-select-header"
+              >
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+              
+              <select 
+                value={filterPriority} 
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="filter-select-header"
+              >
+                <option value="all">All Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+
+              <button onClick={fetchTickets} className="refresh-btn-header" disabled={loading}>
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          <div className="header-tabs">
+            <button 
+              className={`header-tab-btn ${!showHistory ? 'active' : ''}`}
+              onClick={() => setShowHistory(false)}
+            >
+              Open Tickets ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
+            </button>
+            <button 
+              className={`header-tab-btn ${showHistory ? 'active' : ''}`}
+              onClick={() => setShowHistory(true)}
+            >
+              Closed/History ({tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
+            </button>
+            {showHistory && (
+              <button 
+                onClick={clearAdminHistory} 
+                className="delete-all-history-btn-header" 
+                disabled={updating || tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0}
+                title={tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0 ? 'No history to delete' : 'Permanently delete all closed/resolved tickets'}
+              >
+                {updating ? 'Deleting...' : '🗑️ Delete'}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -508,74 +575,9 @@ export default function AdminDashboard() {
       {/* Filters and Search */}
       <section className="filters-section">
         <div className="filters-header">
-          <button 
-            className={`history-tab-btn ${!showHistory ? 'active' : ''}`}
-            onClick={() => setShowHistory(false)}
-          >
-            Open Tickets ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
-          </button>
-          <button 
-            className={`history-tab-btn ${showHistory ? 'active' : ''}`}
-            onClick={() => setShowHistory(true)}
-          >
-            Closed/History ({tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
-          </button>
         </div>
         
         <div className="filters-container">
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="Search tickets by title, reporter, or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          
-          <div className="filter-group">
-            <label>Status:</label>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>Priority:</label>
-            <select 
-              value={filterPriority} 
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-
-          <button onClick={fetchTickets} className="refresh-btn" disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-          {showHistory && (
-            <button 
-              onClick={clearAdminHistory} 
-              className="delete-all-history-btn" 
-              disabled={updating || tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0}
-              title={tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0 ? 'No history to delete' : 'Permanently delete all closed/resolved tickets'}
-            >
-              {updating ? 'Deleting...' : '🗑️ Delete History'}
-            </button>
-          )}
         </div>
       </section>
 

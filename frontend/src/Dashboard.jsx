@@ -785,11 +785,6 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
-              {Object.keys(unreadResponses).length > 0 && (
-                <span className="unread-count-badge">
-                  {Object.keys(unreadResponses).length} new update{Object.keys(unreadResponses).length > 1 ? 's' : ''}
-                </span>
-              )}
             </div>
             <button 
               className="btn btn-secondary"
@@ -831,13 +826,13 @@ export default function Dashboard() {
                     markTicketResponsesAsRead(ticket)
                   }}
                 >
-                  {unreadResponses[ticket.id] && (
-                    <div className="ticket-update-indicator" title="New admin response">
-                      📬
-                    </div>
-                  )}
                   <div className="ticket-header-compact">
-                    <h3>{ticket.title}</h3>
+                    <div className="ticket-title-wrapper">
+                      <h3>{ticket.title}</h3>
+                      {unreadResponses[ticket.id] && (
+                        <span className="ticket-update-badge">1 new update</span>
+                      )}
+                    </div>
                     <div className="ticket-badges">
                       <span 
                         className="priority-badge"
