@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import './Dashboard.css'
 import NotificationCenter from './NotificationCenter'
+import { io } from 'socket.io-client'
 
 const API_BASE_URL = 'http://localhost:8000'
+let socket = null
 
 export default function Dashboard() {
   const [tickets, setTickets] = useState([])
@@ -29,12 +31,14 @@ export default function Dashboard() {
   const [selectedTicketSource, setSelectedTicketSource] = useState(null) // 'all' or 'my'
   const [unreadResponses, setUnreadResponses] = useState({}) // Track unread responses by ticket ID
   const [showHistory, setShowHistory] = useState(false) // Toggle history view
+  const [realtimeNotification, setRealtimeNotification] = useState(null) // Real-time WebSocket notification
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
     fetchTickets()
     loadMyTickets()
     checkForUnreadResponses()
+    setupWebSocket()
     
     // Listen for storage changes (from other tabs or notification clearing)
     const handleStorageChange = (e) => {
@@ -44,7 +48,12 @@ export default function Dashboard() {
     }
     
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      if (socket) {
+        socket.disconnect()
+      }
+    }
   }, [])
 
   // Update local storage when selected ticket changes
@@ -197,6 +206,91 @@ export default function Dashboard() {
       setUnreadResponses(unread)
     } catch (err) {
       console.error('Error checking for unread responses:', err)
+    }
+  }
+
+  // Setup WebSocket connection for real-time updates
+  const setupWebSocket = () => {
+    try {
+      socket = io(`${API_BASE_URL}/user`, {
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+        transports: ['websocket', 'polling']
+      })
+
+      socket.on('connect', () => {
+        console.log('Connected to real-time updates')
+      })
+
+      socket.on('ticket_updated', (data) => {
+        console.log('Ticket updated in real-time:', data)
+        
+        // Update the ticket in myTickets
+        setMyTickets(prev => {
+          const updated = prev.map(ticket => 
+            ticket.id === data.ticket_id ? { ...ticket, ...data.ticket } : ticket
+          )
+          localStorage.setItem('mySubmittedTickets', JSON.stringify(updated))
+          return updated
+        })
+
+        // Show notification
+        setRealtimeNotification({
+          type: 'ticket_updated',
+          message: `Ticket "${data.ticket?.title}" has been updated`,
+          timestamp: data.timestamp
+        })
+        setTimeout(() => setRealtimeNotification(null), 4000)
+
+        // Update selected ticket if it's the one being updated
+        if (selectedTicket && selectedTicket.id === data.ticket_id) {
+          setSelectedTicket(prev => ({ ...prev, ...data.ticket }))
+        }
+      })
+
+      socket.on('new_response', (data) => {
+        console.log('New response in real-time:', data)
+        
+        // Update the ticket with the new response
+        setMyTickets(prev => {
+          const updated = prev.map(ticket => 
+            ticket.id === data.ticket_id ? { ...ticket, ...data.ticket } : ticket
+          )
+          localStorage.setItem('mySubmittedTickets', JSON.stringify(updated))
+          return updated
+        })
+
+        // Show notification
+        setRealtimeNotification({
+          type: 'new_response',
+          message: `${data.admin_name} responded to your ticket`,
+          timestamp: data.timestamp
+        })
+        setTimeout(() => setRealtimeNotification(null), 4000)
+
+        // Update selected ticket if viewing it
+        if (selectedTicket && selectedTicket.id === data.ticket_id) {
+          setSelectedTicket(prev => ({ ...prev, ...data.ticket }))
+        }
+
+        // Mark as unread
+        setUnreadResponses(prev => ({
+          ...prev,
+          [data.ticket_id]: true
+        }))
+      })
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from real-time updates')
+      })
+
+      socket.on('error', (error) => {
+        console.error('WebSocket error:', error)
+      })
+    } catch (err) {
+      console.error('Error setting up WebSocket:', err)
     }
   }
 
@@ -439,6 +533,17 @@ export default function Dashboard() {
       {successMessage && (
         <div className="alert alert-success">
           <strong>Success:</strong> {successMessage}
+        </div>
+      )}
+
+      {/* Real-time notification */}
+      {realtimeNotification && (
+        <div className={`realtime-notification realtime-notification-${realtimeNotification.type}`}>
+          <div className="notification-content">
+            {realtimeNotification.type === 'ticket_updated' && <span className="notification-icon">🔄</span>}
+            {realtimeNotification.type === 'new_response' && <span className="notification-icon">💬</span>}
+            <span className="notification-message">{realtimeNotification.message}</span>
+          </div>
         </div>
       )}
 

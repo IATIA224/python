@@ -38,8 +38,7 @@ export default function AdminDashboard() {
 
   const setupWebSocket = () => {
     try {
-      socket = io(API_BASE_URL, {
-        namespace: '/admin',
+      socket = io(`${API_BASE_URL}/admin`, {
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
