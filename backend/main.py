@@ -551,6 +551,362 @@ async def mark_response_as_read(ticket_id: str, response_id: str):
         )
 
 
+# ==================== USER FEEDBACK ENDPOINTS ====================
+
+@app.post("/tickets/{ticket_id}/feedback/rate")
+async def rate_ticket(ticket_id: str, rating: int):
+    """
+    Rate a completed ticket (1-5 stars).
+    
+    Args:
+        ticket_id: The ticket ID
+        rating: Rating from 1 to 5
+    
+    Returns:
+        Updated ticket with feedback
+    """
+    try:
+        if not 1 <= rating <= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rating must be between 1 and 5"
+            )
+        
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Find ticket and update/initialize feedback
+        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Initialize or update user_feedback
+        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
+            ticket["user_feedback"] = {
+                "rating": rating,
+                "likes": 0,
+                "dislikes": 0,
+                "comments": [],
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+        else:
+            ticket["user_feedback"]["rating"] = rating
+            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
+        
+        result = await tickets_collection.update_one(
+            {"_id": ObjectId(ticket_id)},
+            {"$set": {"user_feedback": ticket["user_feedback"]}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update ticket rating"
+            )
+        
+        return {"message": "Rating saved successfully", "rating": rating}
+    
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ticket ID format"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error rating ticket: {str(e)}"
+        )
+
+
+@app.post("/tickets/{ticket_id}/feedback/comment")
+async def add_comment(ticket_id: str, user_name: str, comment_text: str):
+    """
+    Add a comment to a completed ticket.
+    
+    Args:
+        ticket_id: The ticket ID
+        user_name: Name of the user adding the comment
+        comment_text: The comment text
+    
+    Returns:
+        Success message with comment ID
+    """
+    try:
+        if not user_name or len(user_name.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User name is required"
+            )
+        
+        if not comment_text or len(comment_text.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Comment text is required"
+            )
+        
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Find ticket
+        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Initialize or update user_feedback
+        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
+            ticket["user_feedback"] = {
+                "rating": None,
+                "likes": 0,
+                "dislikes": 0,
+                "comments": [],
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+        
+        # Add comment
+        comment_id = str(uuid.uuid4())
+        new_comment = {
+            "comment_id": comment_id,
+            "user_name": user_name.strip(),
+            "comment_text": comment_text.strip(),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        ticket["user_feedback"]["comments"].append(new_comment)
+        ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
+        
+        result = await tickets_collection.update_one(
+            {"_id": ObjectId(ticket_id)},
+            {"$set": {"user_feedback": ticket["user_feedback"]}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to add comment"
+            )
+        
+        return {
+            "message": "Comment added successfully",
+            "comment_id": comment_id
+        }
+    
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ticket ID format"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error adding comment: {str(e)}"
+        )
+
+
+@app.post("/tickets/{ticket_id}/feedback/like")
+async def like_ticket(ticket_id: str):
+    """
+    Like a completed ticket.
+    
+    Args:
+        ticket_id: The ticket ID
+    
+    Returns:
+        Updated like count
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Find ticket
+        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Initialize or update user_feedback
+        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
+            ticket["user_feedback"] = {
+                "rating": None,
+                "likes": 1,
+                "dislikes": 0,
+                "comments": [],
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+        else:
+            ticket["user_feedback"]["likes"] += 1
+            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
+        
+        result = await tickets_collection.update_one(
+            {"_id": ObjectId(ticket_id)},
+            {"$set": {"user_feedback": ticket["user_feedback"]}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to like ticket"
+            )
+        
+        return {
+            "message": "Liked successfully",
+            "likes": ticket["user_feedback"]["likes"]
+        }
+    
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ticket ID format"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error liking ticket: {str(e)}"
+        )
+
+
+@app.post("/tickets/{ticket_id}/feedback/dislike")
+async def dislike_ticket(ticket_id: str):
+    """
+    Dislike a completed ticket.
+    
+    Args:
+        ticket_id: The ticket ID
+    
+    Returns:
+        Updated dislike count
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Find ticket
+        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Initialize or update user_feedback
+        if "user_feedback" not in ticket or ticket["user_feedback"] is None:
+            ticket["user_feedback"] = {
+                "rating": None,
+                "likes": 0,
+                "dislikes": 1,
+                "comments": [],
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+        else:
+            ticket["user_feedback"]["dislikes"] += 1
+            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
+        
+        result = await tickets_collection.update_one(
+            {"_id": ObjectId(ticket_id)},
+            {"$set": {"user_feedback": ticket["user_feedback"]}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to dislike ticket"
+            )
+        
+        return {
+            "message": "Disliked successfully",
+            "dislikes": ticket["user_feedback"]["dislikes"]
+        }
+    
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ticket ID format"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error disliking ticket: {str(e)}"
+        )
+
+
+@app.delete("/tickets/{ticket_id}/feedback/comment/{comment_id}")
+async def delete_comment(ticket_id: str, comment_id: str):
+    """
+    Delete a comment from a ticket.
+    
+    Args:
+        ticket_id: The ticket ID
+        comment_id: The comment ID to delete
+    
+    Returns:
+        Success message
+    """
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        # Find ticket
+        ticket = await tickets_collection.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not ticket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found"
+            )
+        
+        # Remove comment
+        if "user_feedback" in ticket and ticket["user_feedback"]:
+            ticket["user_feedback"]["comments"] = [
+                c for c in ticket["user_feedback"]["comments"]
+                if c.get("comment_id") != comment_id
+            ]
+            ticket["user_feedback"]["updated_at"] = datetime.utcnow().isoformat()
+            
+            result = await tickets_collection.update_one(
+                {"_id": ObjectId(ticket_id)},
+                {"$set": {"user_feedback": ticket["user_feedback"]}}
+            )
+            
+            if result.modified_count == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to delete comment"
+                )
+        
+        return {"message": "Comment deleted successfully"}
+    
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ticket ID or comment ID format"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting comment: {str(e)}"
+        )
+
+
 @app.delete("/admin/clear-history", status_code=status.HTTP_200_OK)
 async def clear_admin_history():
     """

@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [realtimeNotification, setRealtimeNotification] = useState(null) // Real-time WebSocket notification
   const [clearHistoryModal, setClearHistoryModal] = useState(false) // Clear history confirmation modal
   const [closedTicketCount, setClosedTicketCount] = useState(0) // Count of closed/resolved tickets
+  const [commentText, setCommentText] = useState('') // For feedback comments
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
@@ -445,6 +446,186 @@ export default function Dashboard() {
       })
     } catch {
       return dateString
+    }
+  }
+
+  // Submit a rating for a ticket
+  const submitRating = async (ticketId, rating) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/rate?rating=${rating}`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit rating')
+      }
+
+      // Update selected ticket with new rating
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          rating: rating
+        }
+      }))
+
+      // Also update in myTickets
+      setMyTickets(prev => prev.map(t => 
+        t.id === ticketId 
+          ? { ...t, user_feedback: { ...t.user_feedback, rating: rating } }
+          : t
+      ))
+
+      setSuccessMessage(`Rated ${rating} star${rating !== 1 ? 's' : ''}!`)
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error submitting rating: ' + err.message)
+      console.error('Error submitting rating:', err)
+    }
+  }
+
+  // Submit a like for a ticket
+  const submitLike = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/like`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to like ticket')
+      }
+
+      const data = await response.json()
+
+      // Update selected ticket with new like count
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          likes: data.likes
+        }
+      }))
+
+      // Also update in myTickets
+      setMyTickets(prev => prev.map(t => 
+        t.id === ticketId 
+          ? { ...t, user_feedback: { ...t.user_feedback, likes: data.likes } }
+          : t
+      ))
+
+      setSuccessMessage('Thank you for the feedback!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error liking ticket: ' + err.message)
+      console.error('Error liking ticket:', err)
+    }
+  }
+
+  // Submit a dislike for a ticket
+  const submitDislike = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/dislike`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to dislike ticket')
+      }
+
+      const data = await response.json()
+
+      // Update selected ticket with new dislike count
+      setSelectedTicket(prev => ({
+        ...prev,
+        user_feedback: {
+          ...prev.user_feedback,
+          dislikes: data.dislikes
+        }
+      }))
+
+      // Also update in myTickets
+      setMyTickets(prev => prev.map(t => 
+        t.id === ticketId 
+          ? { ...t, user_feedback: { ...t.user_feedback, dislikes: data.dislikes } }
+          : t
+      ))
+
+      setSuccessMessage('Thank you for the feedback!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error disliking ticket: ' + err.message)
+      console.error('Error disliking ticket:', err)
+    }
+  }
+
+  // Submit a comment for a ticket
+  const submitComment = async (ticketId, userName) => {
+    try {
+      if (!commentText.trim()) {
+        setError('Comment cannot be empty')
+        return
+      }
+
+      const params = new URLSearchParams({
+        user_name: userName,
+        comment_text: commentText.trim()
+      })
+
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/comment?${params}`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add comment')
+      }
+
+      const data = await response.json()
+
+      // Refresh selected ticket to get updated comments
+      const ticketResponse = await fetch(`${API_BASE_URL}/tickets/${ticketId}`)
+      if (ticketResponse.ok) {
+        const updatedTicket = await ticketResponse.json()
+        setSelectedTicket(updatedTicket)
+        
+        // Update in myTickets
+        setMyTickets(prev => prev.map(t => t.id === ticketId ? updatedTicket : t))
+      }
+
+      setCommentText('')
+      setSuccessMessage('Comment added successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error adding comment: ' + err.message)
+      console.error('Error adding comment:', err)
+    }
+  }
+
+  // Delete a comment from a ticket
+  const deleteComment = async (ticketId, commentId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/feedback/comment/${commentId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment')
+      }
+
+      // Refresh selected ticket to get updated comments
+      const ticketResponse = await fetch(`${API_BASE_URL}/tickets/${ticketId}`)
+      if (ticketResponse.ok) {
+        const updatedTicket = await ticketResponse.json()
+        setSelectedTicket(updatedTicket)
+        
+        // Update in myTickets
+        setMyTickets(prev => prev.map(t => t.id === ticketId ? updatedTicket : t))
+      }
+
+      setSuccessMessage('Comment deleted successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error deleting comment: ' + err.message)
+      console.error('Error deleting comment:', err)
     }
   }
 
@@ -962,6 +1143,101 @@ export default function Dashboard() {
               {selectedTicket.id && (
                 <div className="modal-section">
                   <strong>Ticket ID:</strong> {selectedTicket.id.substring(0, 8).toUpperCase()}
+                </div>
+              )}
+
+              {/* User Feedback Section - shown for completed tickets */}
+              {(selectedTicket.status === 'closed' || selectedTicket.status === 'resolved') && (
+                <div className="modal-section feedback-section">
+                  <h3>Rate & Share Your Feedback</h3>
+                  
+                  {/* Star Rating */}
+                  <div className="feedback-subsection">
+                    <label>Rate this ticket (1-5 stars)</label>
+                    <div className="star-rating">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button
+                          key={star}
+                          className={`star ${selectedTicket.user_feedback?.rating >= star ? 'filled' : ''}`}
+                          onClick={() => submitRating(selectedTicket.id, star)}
+                          title={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    {selectedTicket.user_feedback?.rating && (
+                      <p className="rating-text">You rated this {selectedTicket.user_feedback.rating} star{selectedTicket.user_feedback.rating !== 1 ? 's' : ''}</p>
+                    )}
+                  </div>
+
+                  {/* Like/Dislike Buttons */}
+                  <div className="feedback-subsection">
+                    <label>Was this helpful?</label>
+                    <div className="like-dislike-buttons">
+                      <button 
+                        className="like-btn"
+                        onClick={() => submitLike(selectedTicket.id)}
+                        title="Like this ticket resolution"
+                      >
+                        👍 Like ({selectedTicket.user_feedback?.likes || 0})
+                      </button>
+                      <button 
+                        className="dislike-btn"
+                        onClick={() => submitDislike(selectedTicket.id)}
+                        title="Dislike this ticket resolution"
+                      >
+                        👎 Dislike ({selectedTicket.user_feedback?.dislikes || 0})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Comments Section */}
+                  <div className="feedback-subsection">
+                    <label>Add a comment (optional)</label>
+                    <div className="comment-input-group">
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Share your experience with this ticket resolution..."
+                        className="comment-textarea"
+                        maxLength={1000}
+                      />
+                      <div className="comment-footer">
+                        <span className="char-count">{commentText.length}/1000</span>
+                        <button 
+                          onClick={() => submitComment(selectedTicket.id, selectedTicket.reporter_name)}
+                          className="submit-comment-btn"
+                          disabled={!commentText.trim()}
+                        >
+                          Post Comment
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Comments List */}
+                    {selectedTicket.user_feedback?.comments && selectedTicket.user_feedback.comments.length > 0 && (
+                      <div className="comments-list">
+                        <h4>Comments ({selectedTicket.user_feedback.comments.length})</h4>
+                        {selectedTicket.user_feedback.comments.map(comment => (
+                          <div key={comment.comment_id} className="comment-item">
+                            <div className="comment-header">
+                              <strong>{comment.user_name}</strong>
+                              <span className="comment-date">{formatDate(comment.created_at)}</span>
+                            </div>
+                            <p className="comment-text">{comment.comment_text}</p>
+                            <button
+                              className="delete-comment-btn"
+                              onClick={() => deleteComment(selectedTicket.id, comment.comment_id)}
+                              title="Delete this comment"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

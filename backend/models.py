@@ -15,6 +15,24 @@ class AdministratorResponse(BaseModel):
     is_read: bool = False
 
 
+class UserFeedbackComment(BaseModel):
+    """Model for user comments on completed tickets"""
+    comment_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_name: str = Field(..., min_length=1, max_length=100)
+    comment_text: str = Field(..., min_length=1, max_length=1000)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserFeedback(BaseModel):
+    """Model for user feedback on completed tickets"""
+    rating: Optional[int] = Field(None, ge=1, le=5)  # 1-5 star rating
+    likes: int = Field(default=0)
+    dislikes: int = Field(default=0)
+    comments: List[UserFeedbackComment] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+
 class TicketStatus(str, Enum):
     """Enum for ticket status values"""
     OPEN = "open"
@@ -55,6 +73,7 @@ class TicketBase(BaseModel):
     image_data: Optional[str] = None  # Base64 encoded image data
     admin_responses: List[AdministratorResponse] = Field(default_factory=list)
     last_response_date: Optional[datetime] = None
+    user_feedback: Optional[UserFeedback] = None  # User feedback on completed tickets
 
 
 class TicketCreate(TicketBase):
