@@ -308,6 +308,12 @@ async def update_ticket(ticket_id: str, status_update: dict):
         updated_ticket["id"] = str(updated_ticket["_id"])
         del updated_ticket["_id"]
         
+        # Broadcast ticket update to all connected admins and the reporter
+        try:
+            await broadcast_ticket_update(str(obj_id), updated_ticket, 'status_update')
+        except Exception as e:
+            print(f"Warning: Failed to broadcast ticket update: {str(e)}")
+        
         # Send email notification asynchronously
         if new_status and ticket_before.get("reporter_email"):
             try:
