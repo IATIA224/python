@@ -5,6 +5,13 @@ import { io } from 'socket.io-client'
 const API_BASE_URL = 'http://localhost:8000'
 let socket = null
 
+// Helper function to get date range start (30 days ago)
+function getDateRangeStart() {
+  const date = new Date()
+  date.setDate(date.getDate() - 30)
+  return date.toISOString().split('T')[0]
+}
+
 export default function AdminDashboard() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,6 +30,9 @@ export default function AdminDashboard() {
   const [deleteHistoryConfirmText, setDeleteHistoryConfirmText] = useState('')
   const [closedTicketCount, setClosedTicketCount] = useState(0)
   const [newNotification, setNewNotification] = useState(null) // Real-time notification
+  const [showAnalytics, setShowAnalytics] = useState(false) // Toggle analytics view
+  const [analyticsDateFrom, setAnalyticsDateFrom] = useState(getDateRangeStart()) // Default: last 30 days
+  const [analyticsDateTo, setAnalyticsDateTo] = useState(new Date().toISOString().split('T')[0])
 
   // Fetch all tickets from backend and setup WebSocket connection
   useEffect(() => {
@@ -414,6 +424,83 @@ export default function AdminDashboard() {
     closed: tickets.filter(t => t.status === 'closed').length
   }
 
+  // Calculate analytics for date range
+  const calculateAnalytics = () => {
+    const fromDate = new Date(analyticsDateFrom)
+    const toDate = new Date(analyticsDateTo)
+    toDate.setHours(23, 59, 59, 999)
+
+    const ticketsInRange = tickets.filter(ticket => {
+      const ticketDate = new Date(ticket.created_at)
+      return ticketDate >= fromDate && ticketDate <= toDate
+    })
+
+    // Feedback Analytics
+    let totalRatings = 0
+    let totalLikes = 0
+    let totalDislikes = 0
+    let totalComments = 0
+    let ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+
+    ticketsInRange.forEach(ticket => {
+      if (ticket.user_feedback) {
+        if (ticket.user_feedback.rating) {
+          totalRatings++
+          ratingDistribution[ticket.user_feedback.rating]++
+        }
+        totalLikes += ticket.user_feedback.likes || 0
+        totalDislikes += ticket.user_feedback.dislikes || 0
+        totalComments += (ticket.user_feedback.comments || []).length
+      }
+    })
+
+    // Status distribution
+    const statusDistribution = {
+      open: ticketsInRange.filter(t => t.status === 'open').length,
+      in_progress: ticketsInRange.filter(t => t.status === 'in_progress').length,
+      resolved: ticketsInRange.filter(t => t.status === 'resolved').length,
+      closed: ticketsInRange.filter(t => t.status === 'closed').length
+    }
+
+    // Priority distribution
+    const priorityDistribution = {
+      low: ticketsInRange.filter(t => t.priority === 'low').length,
+      medium: ticketsInRange.filter(t => t.priority === 'medium').length,
+      high: ticketsInRange.filter(t => t.priority === 'high').length,
+      urgent: ticketsInRange.filter(t => t.priority === 'urgent').length
+    }
+
+    // Category distribution
+    const categoryDistribution = {}
+    ticketsInRange.forEach(ticket => {
+      const cat = ticket.category || 'other'
+      categoryDistribution[cat] = (categoryDistribution[cat] || 0) + 1
+    })
+
+    // Average rating
+    const avgRating = totalRatings > 0 ? (ratingDistribution[5] * 5 + ratingDistribution[4] * 4 + ratingDistribution[3] * 3 + ratingDistribution[2] * 2 + ratingDistribution[1] * 1) / totalRatings : 0
+
+    // Helpful rate
+    const helpfulTotal = totalLikes + totalDislikes
+    const helpfulRate = helpfulTotal > 0 ? (totalLikes / helpfulTotal * 100).toFixed(1) : 0
+
+    return {
+      ticketsInRange: ticketsInRange.length,
+      totalRatings,
+      avgRating: avgRating.toFixed(2),
+      ratingDistribution,
+      totalLikes,
+      totalDislikes,
+      helpfulRate,
+      totalComments,
+      statusDistribution,
+      priorityDistribution,
+      categoryDistribution
+    }
+  }
+
+  const analytics = calculateAnalytics()
+
   return (
     <div className="admin-dashboard">
       {/* Real-time Notification */}
@@ -492,16 +579,23 @@ export default function AdminDashboard() {
 
           <div className="header-tabs">
             <button 
-              className={`header-tab-btn ${!showHistory ? 'active' : ''}`}
-              onClick={() => setShowHistory(false)}
+              className={`header-tab-btn ${!showHistory && !showAnalytics ? 'active' : ''}`}
+              onClick={() => { setShowHistory(false); setShowAnalytics(false) }}
             >
               Open Tickets ({tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length})
             </button>
             <button 
-              className={`header-tab-btn ${showHistory ? 'active' : ''}`}
-              onClick={() => setShowHistory(true)}
+              className={`header-tab-btn ${showHistory && !showAnalytics ? 'active' : ''}`}
+              onClick={() => { setShowHistory(true); setShowAnalytics(false) }}
             >
               Closed/History ({tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length})
+            </button>
+            <button 
+              className={`header-tab-btn ${showAnalytics ? 'active' : ''}`}
+              onClick={() => { setShowAnalytics(true); setShowHistory(false) }}
+              title="View analytics and statistics"
+            >
+              📊 Analytics
             </button>
             {showHistory && (
               <button 
@@ -510,7 +604,7 @@ export default function AdminDashboard() {
                 disabled={updating || tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0}
                 title={tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length === 0 ? 'No history to delete' : 'Permanently delete all closed/resolved tickets'}
               >
-                {updating ? 'Deleting...' : '🗑️ Delete'}
+                {updating ? 'Deleting...' : ' Delete'}
               </button>
             )}
           </div>
@@ -518,6 +612,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Statistics Cards */}
+      {!showAnalytics && (
       <section className="stats-section">
         <div className="stats-grid">
           <div className="stat-card total">
@@ -557,6 +652,229 @@ export default function AdminDashboard() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Analytics Section */}
+      {showAnalytics && (
+        <section className="analytics-section">
+          <div className="analytics-header">
+            <h2>📊 Analytics & Statistics</h2>
+            <div className="analytics-date-filter">
+              <label>From: </label>
+              <input 
+                type="date" 
+                value={analyticsDateFrom} 
+                onChange={(e) => setAnalyticsDateFrom(e.target.value)}
+                className="date-input"
+              />
+              <label>To: </label>
+              <input 
+                type="date" 
+                value={analyticsDateTo} 
+                onChange={(e) => setAnalyticsDateTo(e.target.value)}
+                className="date-input"
+              />
+            </div>
+          </div>
+
+          {/* Feedback Analytics Cards */}
+          <div className="analytics-grid">
+            <div className="analytics-card feedback">
+              <div className="analytics-card-header">
+                <h3>⭐ Rating Analytics</h3>
+              </div>
+              <div className="analytics-card-content">
+                <div className="metric">
+                  <span className="label">Total Ratings:</span>
+                  <span className="value">{analytics.totalRatings}</span>
+                </div>
+                <div className="metric">
+                  <span className="label">Average Rating:</span>
+                  <span className="value star-rating">{analytics.avgRating} ⭐</span>
+                </div>
+                <div className="rating-breakdown">
+                  {[5, 4, 3, 2, 1].map(star => (
+                    <div key={star} className="rating-bar-item">
+                      <span className="stars">{star}⭐</span>
+                      <div className="bar-container">
+                        <div 
+                          className="bar" 
+                          style={{
+                            width: analytics.totalRatings > 0 ? (analytics.ratingDistribution[star] / analytics.totalRatings * 100) : 0 + '%',
+                            backgroundColor: star >= 4 ? '#22c55e' : star >= 3 ? '#f59e0b' : '#ef4444'
+                          }}
+                        ></div>
+                      </div>
+                      <span className="count">({analytics.ratingDistribution[star]})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="analytics-card helpful">
+              <div className="analytics-card-header">
+                <h3>👍 Helpful Feedback</h3>
+              </div>
+              <div className="analytics-card-content">
+                <div className="metric">
+                  <span className="label">Likes:</span>
+                  <span className="value like">{analytics.totalLikes} 👍</span>
+                </div>
+                <div className="metric">
+                  <span className="label">Dislikes:</span>
+                  <span className="value dislike">{analytics.totalDislikes} 👎</span>
+                </div>
+                <div className="metric">
+                  <span className="label">Helpful Rate:</span>
+                  <span className="value helpful-rate">{analytics.helpfulRate}%</span>
+                </div>
+                <div className="helpful-chart">
+                  <div className="helpful-bar">
+                    <div 
+                      className="helpful-fill" 
+                      style={{ width: analytics.helpfulRate + '%' }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="analytics-card comments">
+              <div className="analytics-card-header">
+                <h3>💬 Comments</h3>
+              </div>
+              <div className="analytics-card-content">
+                <div className="metric">
+                  <span className="label">Total Comments:</span>
+                  <span className="value comments-count">{analytics.totalComments}</span>
+                </div>
+                <div className="metric">
+                  <span className="label">Avg per Ticket:</span>
+                  <span className="value">{(analytics.totalComments / analytics.ticketsInRange || 0).toFixed(2)}</span>
+                </div>
+                <div className="metric">
+                  <span className="label">Tickets with Comments:</span>
+                  <span className="value">
+                    {tickets.filter(t => {
+                      const ticketDate = new Date(t.created_at)
+                      const fromDate = new Date(analyticsDateFrom)
+                      const toDate = new Date(analyticsDateTo)
+                      toDate.setHours(23, 59, 59, 999)
+                      return ticketDate >= fromDate && ticketDate <= toDate && t.user_feedback?.comments?.length > 0
+                    }).length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status & Priority Distribution */}
+          <div className="analytics-grid">
+            <div className="analytics-card distribution">
+              <div className="analytics-card-header">
+                <h3>📈 Status Distribution</h3>
+              </div>
+              <div className="analytics-card-content">
+                {Object.entries(analytics.statusDistribution).map(([status, count]) => (
+                  <div key={status} className="distribution-item">
+                    <span className="status-label">{status.replace('_', ' ').toUpperCase()}</span>
+                    <div className="distribution-bar">
+                      <div 
+                        className="distribution-fill"
+                        style={{
+                          width: analytics.ticketsInRange > 0 ? (count / analytics.ticketsInRange * 100) : 0 + '%',
+                          backgroundColor: status === 'open' ? '#ef4444' : status === 'in_progress' ? '#f59e0b' : status === 'resolved' ? '#3b82f6' : '#6b7280'
+                        }}
+                      ></div>
+                    </div>
+                    <span className="count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="analytics-card distribution">
+              <div className="analytics-card-header">
+                <h3>🎯 Priority Distribution</h3>
+              </div>
+              <div className="analytics-card-content">
+                {Object.entries(analytics.priorityDistribution).map(([priority, count]) => (
+                  <div key={priority} className="distribution-item">
+                    <span className="priority-label">{priority.toUpperCase()}</span>
+                    <div className="distribution-bar">
+                      <div 
+                        className="distribution-fill"
+                        style={{
+                          width: analytics.ticketsInRange > 0 ? (count / analytics.ticketsInRange * 100) : 0 + '%',
+                          backgroundColor: priority === 'urgent' ? '#dc2626' : priority === 'high' ? '#ea580c' : priority === 'medium' ? '#f59e0b' : '#10b981'
+                        }}
+                      ></div>
+                    </div>
+                    <span className="count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Category Distribution */}
+          <div className="analytics-full">
+            <div className="analytics-card distribution">
+              <div className="analytics-card-header">
+                <h3>📁 Category Distribution</h3>
+              </div>
+              <div className="analytics-card-content">
+                <div className="category-list">
+                  {Object.entries(analytics.categoryDistribution).map(([category, count]) => (
+                    <div key={category} className="category-item">
+                      <span className="category-name">{category.replace('_', ' ').toUpperCase()}</span>
+                      <div className="category-bar">
+                        <div 
+                          className="category-fill"
+                          style={{
+                            width: analytics.ticketsInRange > 0 ? (count / analytics.ticketsInRange * 100) : 0 + '%'
+                          }}
+                        ></div>
+                      </div>
+                      <span className="count">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="analytics-summary">
+            <h3>📋 Summary</h3>
+            <div className="summary-grid">
+              <div className="summary-item">
+                <span className="summary-label">Total Tickets (Period):</span>
+                <span className="summary-value">{analytics.ticketsInRange}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Avg Response Per Ticket:</span>
+                <span className="summary-value">
+                  {(tickets.filter(t => {
+                    const ticketDate = new Date(t.created_at)
+                    const fromDate = new Date(analyticsDateFrom)
+                    const toDate = new Date(analyticsDateTo)
+                    toDate.setHours(23, 59, 59, 999)
+                    return ticketDate >= fromDate && ticketDate <= toDate
+                  }).reduce((sum, t) => sum + (t.admin_responses?.length || 0), 0) / analytics.ticketsInRange || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Feedback Completion Rate:</span>
+                <span className="summary-value">
+                  {analytics.ticketsInRange > 0 ? ((analytics.totalRatings / analytics.ticketsInRange) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Alerts */}
       {error && (
