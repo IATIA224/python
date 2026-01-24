@@ -961,6 +961,25 @@ async def clear_admin_history():
 # Wrap the FastAPI app with SocketIO for real-time notifications
 app = get_socketio_app(app)
 
+# Ensure CORS headers are applied at the ASGI wrapper level too,
+# so preflight/OPTIONS requests and non-API paths receive proper headers
+app = CORSMiddleware(
+    app,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://pacificsupportfrontend-hdt2adsuu.vercel.app",
+        "https://pacificsupportfrontend.vercel.app",
+    ],
+    allow_origin_regex=r"^https://([a-z0-9-]+)\.vercel\.app$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 
 if __name__ == "__main__":
     import uvicorn
