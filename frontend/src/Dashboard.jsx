@@ -32,6 +32,8 @@ export default function Dashboard() {
   const [unreadResponses, setUnreadResponses] = useState({}) // Track unread responses by ticket ID
   const [showHistory, setShowHistory] = useState(false) // Toggle history view
   const [realtimeNotification, setRealtimeNotification] = useState(null) // Real-time WebSocket notification
+  const [clearHistoryModal, setClearHistoryModal] = useState(false) // Clear history confirmation modal
+  const [closedTicketCount, setClosedTicketCount] = useState(0) // Count of closed/resolved tickets
 
   // Load user's submitted tickets from localStorage on component mount
   useEffect(() => {
@@ -122,23 +124,32 @@ export default function Dashboard() {
 
   // Clear history (closed/resolved tickets) from localStorage
   const clearUserHistory = () => {
-    if (window.confirm('Are you sure you want to clear all closed/resolved issues? This cannot be undone.')) {
-      try {
-        const stored = localStorage.getItem('mySubmittedTickets')
-        if (stored) {
-          const tickets = JSON.parse(stored)
-          const activeTickets = tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved')
-          localStorage.setItem('mySubmittedTickets', JSON.stringify(activeTickets))
-          setMyTickets(activeTickets)
-          setSuccessMessage('History cleared successfully')
-          setTimeout(() => setSuccessMessage(''), 3000)
-          setShowHistory(false)
-        }
-      } catch (err) {
-        setError('Error clearing history: ' + err.message)
-        console.error('Error clearing history:', err)
+    const closed = myTickets.filter(t => t.status === 'closed' || t.status === 'resolved')
+    setClosedTicketCount(closed.length)
+    setClearHistoryModal(true)
+  }
+
+  const handleClearHistoryConfirm = () => {
+    try {
+      const stored = localStorage.getItem('mySubmittedTickets')
+      if (stored) {
+        const tickets = JSON.parse(stored)
+        const activeTickets = tickets.filter(t => t.status !== 'closed' && t.status !== 'resolved')
+        localStorage.setItem('mySubmittedTickets', JSON.stringify(activeTickets))
+        setMyTickets(activeTickets)
+        setSuccessMessage('History cleared successfully')
+        setTimeout(() => setSuccessMessage(''), 3000)
+        setShowHistory(false)
+        setClearHistoryModal(false)
       }
+    } catch (err) {
+      setError('Error clearing history: ' + err.message)
+      console.error('Error clearing history:', err)
     }
+  }
+
+  const handleClearHistoryCancel = () => {
+    setClearHistoryModal(false)
   }
 
   // Fetch all tickets from backend
@@ -958,6 +969,33 @@ export default function Dashboard() {
                   <strong>Ticket ID:</strong> {selectedTicket.id.substring(0, 8).toUpperCase()}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear History Confirmation Modal */}
+      {clearHistoryModal && (
+        <div className="modal-overlay" onClick={handleClearHistoryCancel}>
+          <div className="clear-history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header delete-warning">
+              <h2>Clear History</h2>
+            </div>
+            <div className="modal-body">
+              <p className="warning-text">
+                You are about to clear <strong>{closedTicketCount} closed/resolved issue(s)</strong> from your history.
+              </p>
+              <p className="warning-text">
+                This action <strong>cannot be undone</strong>.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={handleClearHistoryCancel} className="btn-cancel">
+                Cancel
+              </button>
+              <button onClick={handleClearHistoryConfirm} className="btn-delete">
+                Yes, Clear History
+              </button>
             </div>
           </div>
         </div>
