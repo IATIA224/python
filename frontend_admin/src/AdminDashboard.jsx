@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import './AdminDashboard.css'
 import { io } from 'socket.io-client'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const API_BASE_URL = 'http://localhost:8000'
 let socket = null
@@ -501,6 +503,316 @@ export default function AdminDashboard() {
 
   const analytics = calculateAnalytics()
 
+  // Generate PDF Report
+  const downloadReport = () => {
+    try {
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      let yPosition = 15
+
+      // Header
+      doc.setFillColor(59, 130, 246)
+      doc.rect(0, 0, pageWidth, 35, 'F')
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(24)
+      doc.setFont(undefined, 'bold')
+      doc.text('Pacific Support - Analytics Report', pageWidth / 2, 20, { align: 'center' })
+
+      // Report Info
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      const reportDate = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      doc.text(`Generated: ${reportDate}`, pageWidth / 2, 38, { align: 'center' })
+      doc.text(`Period: ${analyticsDateFrom} to ${analyticsDateTo}`, pageWidth / 2, 43, { align: 'center' })
+
+      yPosition = 50
+
+      // Summary Section
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Summary', 14, yPosition)
+      yPosition += 8
+
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      const summaryData = [
+        ['Total Tickets (Period)', analytics.ticketsInRange],
+        ['Average Responses Per Ticket', (tickets.filter(t => {
+          const ticketDate = new Date(t.created_at)
+          const fromDate = new Date(analyticsDateFrom)
+          const toDate = new Date(analyticsDateTo)
+          toDate.setHours(23, 59, 59, 999)
+          return ticketDate >= fromDate && ticketDate <= toDate
+        }).reduce((sum, t) => sum + (t.admin_responses?.length || 0), 0) / analytics.ticketsInRange || 0).toFixed(2)],
+        ['Feedback Completion Rate', `${(analytics.ticketsInRange > 0 ? ((analytics.totalRatings / analytics.ticketsInRange) * 100).toFixed(1) : 0)}%`]
+      ]
+
+      autoTable(doc, {
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Feedback Analytics Section
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Feedback Analytics', 14, yPosition)
+      yPosition += 8
+
+      const feedbackData = [
+        ['Total Ratings', analytics.totalRatings],
+        ['Average Rating', `${analytics.avgRating} / 5.0`],
+        ['5-Star Ratings', analytics.ratingDistribution[5]],
+        ['4-Star Ratings', analytics.ratingDistribution[4]],
+        ['3-Star Ratings', analytics.ratingDistribution[3]],
+        ['2-Star Ratings', analytics.ratingDistribution[2]],
+        ['1-Star Ratings', analytics.ratingDistribution[1]]
+      ]
+
+      autoTable(doc, {
+        head: [['Rating Metric', 'Count']],
+        body: feedbackData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [245, 158, 11],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [255, 251, 235]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Helpful Feedback Section
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Helpful Feedback', 14, yPosition)
+      yPosition += 8
+
+      const helpfulData = [
+        ['Likes', analytics.totalLikes],
+        ['Dislikes', analytics.totalDislikes],
+        ['Helpful Rate', `${analytics.helpfulRate}%`]
+      ]
+
+      autoTable(doc, {
+        head: [['Metric', 'Value']],
+        body: helpfulData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [34, 197, 94],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [240, 253, 244]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Comments Section
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Comments', 14, yPosition)
+      yPosition += 8
+
+      const commentsData = [
+        ['Total Comments', analytics.totalComments],
+        ['Average per Ticket', (analytics.totalComments / analytics.ticketsInRange || 0).toFixed(2)],
+        ['Tickets with Comments', tickets.filter(t => {
+          const ticketDate = new Date(t.created_at)
+          const fromDate = new Date(analyticsDateFrom)
+          const toDate = new Date(analyticsDateTo)
+          toDate.setHours(23, 59, 59, 999)
+          return ticketDate >= fromDate && ticketDate <= toDate && t.user_feedback?.comments?.length > 0
+        }).length]
+      ]
+
+      autoTable(doc, {
+        head: [['Metric', 'Value']],
+        body: commentsData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [139, 92, 246],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [250, 245, 255]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Status Distribution
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Status Distribution', 14, yPosition)
+      yPosition += 8
+
+      const statusData = Object.entries(analytics.statusDistribution).map(([status, count]) => [
+        status.replace('_', ' ').toUpperCase(),
+        count
+      ])
+
+      autoTable(doc, {
+        head: [['Status', 'Count']],
+        body: statusData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Priority Distribution
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Priority Distribution', 14, yPosition)
+      yPosition += 8
+
+      const priorityData = Object.entries(analytics.priorityDistribution).map(([priority, count]) => [
+        priority.toUpperCase(),
+        count
+      ])
+
+      autoTable(doc, {
+        head: [['Priority', 'Count']],
+        body: priorityData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [220, 38, 38],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [254, 242, 242]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      yPosition = doc.lastAutoTable.finalY + 12
+
+      // Category Distribution
+      doc.setFontSize(14)
+      doc.setFont(undefined, 'bold')
+      doc.text('Category Distribution', 14, yPosition)
+      yPosition += 8
+
+      const categoryData = Object.entries(analytics.categoryDistribution).map(([category, count]) => [
+        category.replace('_', ' ').toUpperCase(),
+        count
+      ])
+
+      autoTable(doc, {
+        head: [['Category', 'Count']],
+        body: categoryData,
+        startY: yPosition,
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250]
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      // Footer
+      const pageCount = doc.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(9)
+        doc.setTextColor(128, 128, 128)
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        )
+      }
+
+      // Download the PDF
+      const fileName = `Pacific-Support-Analytics-${new Date().toISOString().split('T')[0]}.pdf`
+      doc.save(fileName)
+
+      setSuccessMessage('Report downloaded successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Error generating report: ' + err.message)
+      console.error('Error generating PDF:', err)
+    }
+  }
+
   return (
     <div className="admin-dashboard">
       {/* Real-time Notification */}
@@ -659,21 +971,30 @@ export default function AdminDashboard() {
         <section className="analytics-section">
           <div className="analytics-header">
             <h2>📊 Analytics & Statistics</h2>
-            <div className="analytics-date-filter">
-              <label>From: </label>
-              <input 
-                type="date" 
-                value={analyticsDateFrom} 
-                onChange={(e) => setAnalyticsDateFrom(e.target.value)}
-                className="date-input"
-              />
-              <label>To: </label>
-              <input 
-                type="date" 
-                value={analyticsDateTo} 
-                onChange={(e) => setAnalyticsDateTo(e.target.value)}
-                className="date-input"
-              />
+            <div className="analytics-controls">
+              <div className="analytics-date-filter">
+                <label>From: </label>
+                <input 
+                  type="date" 
+                  value={analyticsDateFrom} 
+                  onChange={(e) => setAnalyticsDateFrom(e.target.value)}
+                  className="date-input"
+                />
+                <label>To: </label>
+                <input 
+                  type="date" 
+                  value={analyticsDateTo} 
+                  onChange={(e) => setAnalyticsDateTo(e.target.value)}
+                  className="date-input"
+                />
+              </div>
+              <button 
+                onClick={downloadReport}
+                className="download-report-btn"
+                title="Download analytics report as PDF"
+              >
+                📥 Download Report
+              </button>
             </div>
           </div>
 
