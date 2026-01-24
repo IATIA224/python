@@ -28,9 +28,12 @@ app.add_middleware(
         "http://localhost:5174",
         "http://localhost:3000",
         "http://localhost:3001",
+        # Explicit Vercel project domains
         "https://pacificsupportfrontend-hdt2adsuu.vercel.app",
-        "https://pacificsupportfrontend.vercel.app"
+        "https://pacificsupportfrontend.vercel.app",
     ],
+    # Also allow any Vercel subdomain just in case the URL changes
+    allow_origin_regex=r"^https://([a-z0-9-]+)\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
