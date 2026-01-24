@@ -9,8 +9,8 @@
     "backend": "cd backend && python -m uvicorn main:app --reload",
     "frontend": "cd frontend && npm run dev",
     "frontend:admin": "cd frontend_admin && npm run dev",
-    "build": "cd frontend && npm run build",
-    "build:admin": "cd frontend_admin && npm run build",
+    "build": "cd frontend && npm install && npm run build",
+    "build:admin": "cd frontend_admin && npm install && npm run build",
     "preview": "cd frontend && npm run preview"
   },
   "devDependencies": {
