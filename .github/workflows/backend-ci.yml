@@ -1,0 +1,56 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Lint with pylint (optional)
+        run: |
+          cd backend
+          pip install pylint
+          pylint --disable=all --enable=E,F **/*.py || true
+        continue-on-error: true
+      
+      - name: Check syntax
+        run: |
+          cd backend
+          python -m py_compile *.py
+      
+      - name: Run basic import test
+        run: |
+          cd backend
+          python -c "from main import app; print('✅ Backend imports successful')"
+
+  # Auto-deployment happens via Render webhook on successful tests
+  notify-deployment:
+    needs: backend
+    runs-on: ubuntu-latest
+    if: success() && github.ref == 'refs/heads/master'
+    steps:
+      - name: Deployment Status
+        run: echo "✅ Backend tests passed. Render webhook will auto-deploy."

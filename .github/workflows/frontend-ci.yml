@@ -1,0 +1,54 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'frontend/**'
+      - 'frontend_admin/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'frontend/**'
+      - 'frontend_admin/**'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, frontend_admin]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '${{ matrix.app }}/package-lock.json'
+      
+      - name: Install dependencies - ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm install
+      
+      - name: Lint - ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm run lint --max-warnings 0
+        continue-on-error: true
+      
+      - name: Build - ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm run build
+      
+      - name: Run Preview - ${{ matrix.app }}
+        run: cd ${{ matrix.app }} && npm run preview &
+        continue-on-error: true
+
+  # Auto-deployment happens via Vercel webhook on successful build
+  notify-deployment:
+    needs: frontend
+    runs-on: ubuntu-latest
+    if: success() && github.ref == 'refs/heads/master'
+    steps:
+      - name: Deployment Status
+        run: echo "✅ Frontend tests passed. Vercel webhook will auto-deploy."
