@@ -74,6 +74,7 @@ class TicketBase(BaseModel):
     admin_responses: List[AdministratorResponse] = Field(default_factory=list)
     last_response_date: Optional[datetime] = None
     user_feedback: Optional[UserFeedback] = None  # User feedback on completed tickets
+    is_viewed: bool = Field(default=False)  # Track if admin has viewed this ticket
 
 
 class TicketCreate(TicketBase):

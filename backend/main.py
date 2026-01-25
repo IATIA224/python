@@ -374,6 +374,35 @@ async def update_ticket(ticket_id: str, status_update: dict):
         )
 
 
+@app.patch("/tickets/{ticket_id}/mark-viewed", response_model=Ticket)
+async def mark_ticket_viewed(ticket_id: str):
+    """Mark a ticket as viewed by admin."""
+    try:
+        tickets_collection = db[TICKETS_COLLECTION]
+        
+        try:
+            obj_id = ObjectId(ticket_id)
+        except:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ticket ID")
+        
+        updated_ticket = await tickets_collection.find_one_and_update(
+            {"_id": obj_id},
+            {"$set": {"is_viewed": True, "updated_at": datetime.utcnow()}},
+            return_document=True
+        )
+        
+        if not updated_ticket:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        
+        updated_ticket["id"] = str(updated_ticket["_id"])
+        del updated_ticket["_id"]
+        return Ticket(**updated_ticket)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @app.delete("/tickets/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ticket(ticket_id: str):
     """

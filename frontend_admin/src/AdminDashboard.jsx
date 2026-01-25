@@ -286,6 +286,30 @@ export default function AdminDashboard() {
     setDeleteHistoryConfirmText('')
   }
 
+  // Handle viewing a ticket and mark it as viewed
+  const handleViewTicket = async (ticket) => {
+    setSelectedTicket(ticket)
+    
+    // Mark as viewed if not already viewed
+    if (!ticket.is_viewed) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tickets/${ticket.id}/mark-viewed`, {
+          method: 'PATCH'
+        })
+
+        if (response.ok) {
+          const updatedTicket = await response.json()
+          setTickets(prev =>
+            prev.map(t => t.id === ticket.id ? updatedTicket : t)
+          )
+          setSelectedTicket(updatedTicket)
+        }
+      } catch (err) {
+        console.error('Error marking ticket as viewed:', err)
+      }
+    }
+  }
+
   // Submit reply/note with optimistic update
   const handleSubmitReply = async (ticketId) => {
     if (!replyText.trim()) return
@@ -1297,10 +1321,11 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {filteredTickets.map((ticket) => (
-                  <tr key={ticket.id} className="ticket-row">
+                  <tr key={ticket.id} className={`ticket-row ${!ticket.is_viewed ? 'unread' : ''}`}>
                     <td className="ticket-id">#{ticket.id.slice(-6)}</td>
                     <td className="ticket-title">
                       <strong>{ticket.title}</strong>
+                      {!ticket.is_viewed && <span className="new-ticket-badge">NEW</span>}
                     </td>
                     <td className="ticket-reporter">
                       <div>{ticket.reporter_name}</div>
@@ -1332,7 +1357,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="ticket-actions">
                       <button 
-                        onClick={() => setSelectedTicket(ticket)}
+                        onClick={() => handleViewTicket(ticket)}
                         className="action-btn view-btn"
                         title="View Details"
                       >
