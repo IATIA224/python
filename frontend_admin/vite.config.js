@@ -12,7 +12,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor': ['react', 'react-dom'],
-          'pdf': ['jspdf', 'jspdf-autotable', 'html2canvas', 'purify'],
+          'pdf': ['jspdf', 'jspdf-autotable', 'html2canvas'],
           'socket': ['socket.io-client']
         }
       }
