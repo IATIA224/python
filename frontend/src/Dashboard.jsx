@@ -1049,6 +1049,11 @@ export default function Dashboard() {
             <div className="tickets-list">
               {myTickets
                 .filter(ticket => showHistory ? (ticket.status === 'closed' || ticket.status === 'resolved') : (ticket.status !== 'closed' && ticket.status !== 'resolved'))
+                .sort((a, b) => {
+                  const dateA = new Date(a.created_at || a.submittedAt)
+                  const dateB = new Date(b.created_at || b.submittedAt)
+                  return dateB - dateA
+                })
                 .map((ticket, index) => (
                 <div 
                   key={index} 

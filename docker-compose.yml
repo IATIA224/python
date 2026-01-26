@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build: ./backend
+    container_name: pacific-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongo:27017/}
+      - DATABASE_NAME=${DATABASE_NAME:-pacific_support}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - pacific-network
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  # Frontend service
+  frontend:
+    build: ./frontend
+    container_name: pacific-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - pacific-network
+    restart: unless-stopped
+
+  # Frontend Admin service
+  frontend_admin:
+    build: ./frontend_admin
+    container_name: pacific-admin
+    ports:
+      - "3001:3001"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - pacific-network
+    restart: unless-stopped
+
+  # MongoDB database
+  mongo:
+    image: mongo:7.0
+    container_name: pacific-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME:-pacific_support}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - pacific-network
+    restart: unless-stopped
+
+  # Redis cache/message broker
+  redis:
+    image: redis:7-alpine
+    container_name: pacific-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - pacific-network
+    restart: unless-stopped
+
+networks:
+  pacific-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
